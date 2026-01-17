@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Product, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, ChatMessage, Category, User } from '../types';
 
 interface AdminProps {
@@ -57,10 +57,11 @@ const Admin: React.FC<AdminProps> = ({
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === 'fouad12jad1///') {
+    // Use environment variable for admin password to keep it hidden from frontend source
+    if (password === process.env.ADMIN_PASSWORD) {
       setIsAuthenticated(true);
     } else {
-      alert('Code invalide');
+      alert('Code d\'accès invalide');
     }
   };
 

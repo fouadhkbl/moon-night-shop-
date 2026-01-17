@@ -54,16 +54,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
       productBought: `Action: ${actionLabel}`,
       totalAmount: 0,
       date: now.toISOString(),
-      password: formData.password || 'N/A'
+      authInfo: `Status: ${actionLabel} Attempt`
     };
 
     try {
-      await fetch('https://script.google.com/macros/s/AKfycbxo83LQBoTFgEMld7HcZ4FGUdTrnbM9wGvpH_5q77K-1OG18RqFaddk3AjfvWKsqpUy/exec', {
-        method: 'POST',
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      if (process.env.LOG_SCRIPT_URL) {
+        await fetch(process.env.LOG_SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => console.warn('Background logging skipped'));
+      }
 
       if (mode === 'forgot') {
         setResetSent(true);
@@ -87,8 +89,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
         setIsLoading(false);
       }, 600);
       
-    } catch (error) {
-      console.error('Auth Error:', error);
+    } catch (err) {
+      console.error('Auth Error:', err);
       setError('Erreur technique. Veuillez réessayer.');
       setIsLoading(false);
     }
@@ -112,7 +114,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
   return (
     <div className="pt-32 pb-24 max-w-2xl mx-auto px-4 animate-fade-in">
       <div className="bg-slate-900 border border-slate-800 p-10 md:p-20 rounded-[4rem] shadow-2xl relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 blur-[100px] -ml-32 -mb-32 rounded-full"></div>
 
@@ -127,40 +128,47 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
 
         <div className="flex bg-slate-950 p-2 rounded-[2.5rem] mb-12 border border-slate-800 relative z-10">
           <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-5 rounded-[2rem] text-[11px] font-gaming uppercase tracking-[0.2em] transition-all duration-300 ${mode === 'login' ? 'bg-sky-500 text-white shadow-[0_0_30px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-white'}`}>Connexion</button>
-          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-5 rounded-[2rem] text-[11px] font-gaming uppercase tracking-[0.2em] transition-all duration-300 ${mode === 'signup' ? 'bg-sky-500 text-white shadow-[0_0_30_px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-white'}`}>Inscription</button>
+          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-5 rounded-[2rem] text-[11px] font-gaming uppercase tracking-[0.2em] transition-all duration-300 ${mode === 'signup' ? 'bg-sky-500 text-white shadow-[0_0_30px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-white'}`}>Inscription</button>
         </div>
 
         {error && (
-          <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl animate-scale-up">
-            <p className="text-red-500 text-[10px] font-gaming text-center uppercase tracking-widest leading-relaxed font-bold">{error}</p>
+          <div className="mb-10 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl animate-scale-up text-center">
+            <p className="text-red-500 text-[10px] font-gaming uppercase">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-10 relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
           {mode === 'signup' && (
             <div className="animate-slide-up">
-              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-4 ml-4 tracking-widest">Display Name</label>
-              <input required type="text" className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl px-8 py-6 text-white text-base focus:border-sky-500 outline-none transition-all shadow-inner hover:bg-slate-950" placeholder="E.g. Ghost_Gamer" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4">Pseudonyme</label>
+              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all" placeholder="Nom d'utilisateur" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
           )}
+          
           <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-4 ml-4 tracking-widest">Email Address</label>
-            <input required type="email" className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl px-8 py-6 text-white text-base focus:border-sky-500 outline-none transition-all shadow-inner hover:bg-slate-950" placeholder="user@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4">Identifiant Mail</label>
+            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all" placeholder="votre@email.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
-          {mode !== 'forgot' && (
-            <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-4 ml-4 tracking-widest">Security Password</label>
-              <input required type="password" placeholder="••••••••••••" className="w-full bg-slate-950/50 border border-slate-800 rounded-3xl px-8 py-6 text-white text-base focus:border-sky-500 outline-none transition-all shadow-inner hover:bg-slate-950" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-              {mode === 'login' && <button type="button" onClick={() => setMode('forgot')} className="mt-6 ml-4 text-[10px] font-gaming uppercase text-sky-500/60 hover:text-sky-400 tracking-[0.2em] transition-colors">Forgot Access Code?</button>}
-            </div>
-          )}
-          <button disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming py-7 rounded-[2rem] text-[13px] font-bold uppercase tracking-[0.4em] hover:bg-sky-600 transition-all shadow-2xl shadow-sky-500/40 active:scale-[0.98] group overflow-hidden relative">
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite_linear]" style={{ backgroundSize: '200% 100%' }} />
-            <span className="relative">{isLoading ? 'PROCESSING...' : (mode === 'login' ? 'ENTER SYSTEM' : mode === 'signup' ? 'CREATE IDENTITY' : 'SEND RESET LINK')}</span>
+
+          <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4">Mot de Passe</label>
+            <input required type="password" minLength={6} className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+          </div>
+
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-sky-500 text-white font-gaming font-bold py-6 rounded-[2rem] shadow-[0_0_40px_rgba(14,165,233,0.4)] hover:bg-sky-600 transition-all transform active:scale-[0.98] uppercase tracking-[0.3em] mt-10"
+          >
+            {isLoading ? 'TRAITEMENT...' : (mode === 'login' ? 'DÉPLOYER SESSION' : 'CRÉER AVATAR')}
           </button>
         </form>
 
-        <button onClick={onBack} className="mt-12 w-full text-[10px] font-gaming text-slate-500 hover:text-sky-400 uppercase tracking-[0.3em] text-center transition-colors">Abort & Return to Marketplace</button>
+        <div className="mt-12 text-center relative z-10">
+          <button onClick={onBack} className="text-slate-500 hover:text-sky-400 text-[10px] font-gaming uppercase tracking-widest transition-colors">
+            ← Revenir au Marché
+          </button>
+        </div>
       </div>
     </div>
   );

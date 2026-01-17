@@ -116,7 +116,8 @@ const App: React.FC = () => {
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setAllUsers(prev => {
-      if (prev.find(u => u.email === user.email)) return prev;
+      const existing = prev.find(u => u.email?.toLowerCase() === user.email?.toLowerCase());
+      if (existing) return prev;
       return [...prev, user];
     });
     setActivePage('home');
@@ -125,15 +126,16 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setActivePage('home');
+    localStorage.removeItem('mn_user');
   };
 
   const handleCheckoutComplete = (data: any) => {
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      country: data.country,
+      firstName: data.firstName || 'Client',
+      lastName: data.lastName || 'MoonNight',
+      email: data.email || (currentUser?.email || ''),
+      country: data.country || 'Maroc',
       productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
       totalAmount: data.total,
       date: new Date().toLocaleDateString(),
@@ -142,9 +144,10 @@ const App: React.FC = () => {
     };
 
     if (data.isInstant && data.paymentMethod === 'solde' && currentUser) {
-      const updatedBalance = currentUser.balance - data.total;
-      setCurrentUser(prev => prev ? { ...prev, balance: updatedBalance } : null);
-      setAllUsers(prev => prev.map(u => u.email === currentUser.email ? { ...u, balance: updatedBalance } : u));
+      const updatedBalance = Math.max(0, currentUser.balance - data.total);
+      const updatedUser = { ...currentUser, balance: updatedBalance };
+      setCurrentUser(updatedUser);
+      setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === currentUser.email?.toLowerCase() ? updatedUser : u));
     }
 
     setOrders(prev => [newOrder, ...prev]);
@@ -170,14 +173,18 @@ const App: React.FC = () => {
   };
 
   const handleUpdateUserBalance = (email: string, balance: number) => {
-    setAllUsers(prev => prev.map(u => u.email === email ? { ...u, balance } : u));
-    if (currentUser?.email === email) setCurrentUser(prev => prev ? { ...prev, balance } : null);
+    const emailLower = email.toLowerCase();
+    setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === emailLower ? { ...u, balance } : u));
+    if (currentUser?.email?.toLowerCase() === emailLower) setCurrentUser(prev => prev ? { ...prev, balance } : null);
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex flex-col items-center space-y-4">
+           <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-gaming text-sky-400 text-xs animate-pulse tracking-widest uppercase">Initialisation MoonNight...</p>
+        </div>
       </div>
     );
   }
@@ -215,7 +222,7 @@ const App: React.FC = () => {
                 
                 <div className="space-y-3 mb-10">
                   <p className="text-xs font-gaming uppercase tracking-widest text-slate-500 mb-2">Technical Features:</p>
-                  {selectedProduct.features.map((f, i) => (
+                  {selectedProduct.features?.map((f, i) => (
                     <div key={i} className="flex items-center space-x-3 text-sm text-slate-300">
                       <i className="fas fa-check-circle text-sky-500 text-xs"></i>
                       <span>{f}</span>
@@ -225,13 +232,13 @@ const App: React.FC = () => {
 
                 <div className="flex space-x-4">
                   <button 
-                    onClick={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }}
+                    onClick={() => { handleAddToCart(selectedProduct!); setSelectedProduct(null); }}
                     className="flex-1 bg-sky-500 text-white font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-sky-500/20 hover:bg-sky-600 transition-all active:scale-[0.98]"
                   >
                     DEPLOY ASSET (BUY)
                   </button>
                   <button 
-                    onClick={() => handleToggleWishlist(selectedProduct.id)}
+                    onClick={() => handleToggleWishlist(selectedProduct!.id)}
                     className={`w-16 rounded-2xl border flex items-center justify-center transition-all ${wishlist.includes(selectedProduct.id) ? 'border-red-500/40 text-red-500 bg-red-500/5' : 'border-slate-800 text-slate-500 hover:text-white hover:border-slate-700'}`}
                   >
                     <i className="fas fa-heart"></i>
@@ -249,12 +256,24 @@ const App: React.FC = () => {
         {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} />}
         {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} allUsers={allUsers} />}
         {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} />}
-        {activePage === 'account' && currentUser && <Account user={currentUser} orders={orders} messages={messages} onSendMessage={handleSendMessage} onLogout={handleLogout} onRefresh={() => {}} isRefreshing={false} />}
+        {activePage === 'account' && (
+          currentUser 
+            ? <Account user={currentUser} orders={orders} messages={messages} onSendMessage={handleSendMessage} onLogout={handleLogout} onRefresh={() => {}} isRefreshing={false} />
+            : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} allUsers={allUsers} />
+        )}
         {activePage === 'admin' && (
           <Admin 
             products={allProducts} orders={orders} tickets={tickets} promoCodes={promoCodes} messages={messages} users={allUsers}
             onUpdateUserBalance={handleUpdateUserBalance} onAddProduct={(p) => setAllProducts(prev => [p, ...prev])} onUpdateProduct={(p) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i))} onDeleteProduct={(id) => setAllProducts(prev => prev.filter(i => i.id !== id))} onUpdateOrderStatus={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} onUpdateTicketStatus={(id, status) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))} onDeleteTicket={(id) => setTickets(prev => prev.filter(t => t.id !== id))} onAddPromoCode={(promo) => setPromoCodes(prev => [promo, ...prev])} onDeletePromoCode={(id) => setPromoCodes(prev => prev.filter(p => p.id !== id))} onAdminReply={handleAdminReply}
           />
+        )}
+        
+        {/* Safe fallback for unknown pages */}
+        {!['home', 'shop', 'contact', 'auth', 'checkout', 'account', 'admin'].includes(activePage) && (
+          <div className="pt-40 pb-40 text-center animate-fade-in">
+             <h2 className="text-3xl font-gaming font-bold text-white uppercase tracking-widest mb-4">404 - Système Introuvable</h2>
+             <button onClick={() => setActivePage('home')} className="px-8 py-3 bg-sky-500 text-white rounded-xl font-gaming text-xs uppercase tracking-widest shadow-lg">Retour à la Base</button>
+          </div>
         )}
       </main>
       <Footer onSecretEntrance={() => setActivePage('admin')} />

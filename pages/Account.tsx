@@ -14,8 +14,8 @@ interface AccountProps {
 
 const Account: React.FC<AccountProps> = ({ 
   user, 
-  orders, 
-  messages, 
+  orders = [], 
+  messages = [], 
   onSendMessage, 
   onLogout, 
   onRefresh,
@@ -25,11 +25,15 @@ const Account: React.FC<AccountProps> = ({
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const userOrders = orders.filter(o => o.email.toLowerCase() === user.email.toLowerCase());
+  // Safe checks for user existence
+  if (!user) return null;
+
+  const userEmail = user.email?.toLowerCase() || '';
+  const userOrders = orders.filter(o => o.email?.toLowerCase() === userEmail);
   
   const threadMessages = messages.filter(m => 
-    m.senderEmail.toLowerCase() === user.email.toLowerCase() || 
-    (m.isAdmin && m.text.includes(`[To: ${user.email}]`))
+    m.senderEmail?.toLowerCase() === userEmail || 
+    (m.isAdmin && m.text?.includes(`[To: ${user.email}]`))
   );
 
   const scrollToBottom = () => {
@@ -37,7 +41,10 @@ const Account: React.FC<AccountProps> = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'chat') scrollToBottom();
+    if (activeTab === 'chat') {
+      const timer = setTimeout(scrollToBottom, 100);
+      return () => clearTimeout(timer);
+    }
   }, [threadMessages, activeTab]);
 
   const handleSend = (e: React.FormEvent) => {
@@ -58,10 +65,10 @@ const Account: React.FC<AccountProps> = ({
               <i className="fas fa-wallet text-7xl"></i>
             </div>
             <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-sky-500/20 shadow-lg shadow-sky-500/5">
-              <span className="text-2xl text-sky-400 font-gaming uppercase font-bold">{user.name.charAt(0)}</span>
+              <span className="text-2xl text-sky-400 font-gaming uppercase font-bold">{user.name?.charAt(0) || 'U'}</span>
             </div>
-            <h2 className="text-xl font-gaming font-bold text-white uppercase tracking-widest">{user.name}</h2>
-            <p className="text-slate-500 text-xs mb-6 truncate">{user.email}</p>
+            <h2 className="text-xl font-gaming font-bold text-white uppercase tracking-widest">{user.name || 'Utilisateur'}</h2>
+            <p className="text-slate-500 text-xs mb-6 truncate">{user.email || 'Pas d\'email'}</p>
             
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 text-center">
               <p className="text-[8px] font-gaming text-slate-500 uppercase tracking-widest mb-1">Votre Solde (DH)</p>
@@ -94,7 +101,7 @@ const Account: React.FC<AccountProps> = ({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500 text-[10px] uppercase">Inscription</span>
-              <span className="text-white text-[10px]">{user.joinedAt.split(',')[0]}</span>
+              <span className="text-white text-[10px]">{user.joinedAt?.split(',')[0] || 'Récemment'}</span>
             </div>
           </div>
         </div>
@@ -171,7 +178,7 @@ const Account: React.FC<AccountProps> = ({
                             : 'bg-sky-500 text-white rounded-tr-none shadow-lg shadow-sky-500/10'
                         }`}>
                           {msg.isAdmin && <p className="text-[8px] font-gaming uppercase text-sky-400 mb-1">Support MoonNight</p>}
-                          <p className="leading-relaxed">{msg.text.replace(`[To: ${user.email}]`, '')}</p>
+                          <p className="leading-relaxed">{msg.text?.replace(`[To: ${user.email}]`, '')}</p>
                           <span className={`text-[8px] mt-2 block opacity-40 ${msg.isAdmin ? 'text-left' : 'text-right'}`}>
                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
