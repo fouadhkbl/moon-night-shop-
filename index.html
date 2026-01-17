@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- PayPal SDK Integration using provided Client ID -->
     <script src="https://www.paypal.com/sdk/js?client-id=AZVpU1vUh4HC_6QK2T5e9pXXMwLsu3yNUmjvMMEp_CsEwaN4CwLfRzfLnZqpC9bRyeeQ1mDvMhqx2-Zq&currency=USD"></script>
     <style>
       :root {
@@ -22,10 +21,11 @@
       body {
         font-family: 'Inter', sans-serif;
         background-color: var(--bg-dark);
-        color: white;
+        color: #f1f5f9; /* Lighter text for better contrast */
         overflow-x: hidden;
         margin: 0;
         padding: 0;
+        font-size: 16px; /* Increased base size */
       }
       .font-gaming {
         font-family: 'Orbitron', sans-serif;
@@ -38,47 +38,27 @@
         text-shadow: 0 0 10px rgba(14, 165, 233, 0.8);
       }
       .glass {
-        background: rgba(15, 23, 42, 0.7);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      /* Animations */
-      @keyframes fade-in {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes slide-up {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      @keyframes scale-up {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-      }
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-      }
-      @keyframes spin-slow {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-      @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
-      }
-
+      /* Transitions and animations */
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      
       .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
       .animate-slide-up { animation: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .animate-scale-up { animation: scale-up 0.4s ease-out forwards; }
-      .animate-float { animation: float 4s ease-in-out infinite; }
-      .animate-spin-slow { animation: spin-slow 12s linear infinite; }
       
-      ::-webkit-scrollbar { width: 8px; }
+      /* Typography Overrides for Clarity */
+      h1 { font-size: 3.5rem !important; line-height: 1.2 !important; }
+      h2 { font-size: 2.5rem !important; }
+      p { font-size: 1.1rem !important; line-height: 1.7 !important; }
+      
+      ::-webkit-scrollbar { width: 10px; }
       ::-webkit-scrollbar-track { background: #020617; }
-      ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 2px solid #020617; }
       ::-webkit-scrollbar-thumb:hover { background: #0ea5e9; }
     </style>
     <script type="importmap">
@@ -91,12 +71,6 @@
         "react-dom/client": "https://esm.sh/react-dom@19.0.0/client"
       }
     }
-    </script>
-    <script>
-      // Fallback for SPA routing: if user refreshes on a subpath, redirect to root
-      if (window.location.pathname !== '/' && !window.location.pathname.endsWith('index.html')) {
-        window.history.replaceState(null, '', '/');
-      }
     </script>
   </head>
   <body>
