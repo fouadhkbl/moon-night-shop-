@@ -13,6 +13,7 @@ import Account from './pages/Account';
 import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage } from './types';
 import { PRODUCTS } from './constants';
 
+// Completed App component with full state management and default export
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
@@ -38,8 +39,7 @@ const App: React.FC = () => {
   }, [cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers]);
 
   useEffect(() => {
-    // Initial Load from Storage
-    const loadState = () => {
+    const initApp = async () => {
       try {
         const storedProducts = localStorage.getItem('mn_products');
         const storedOrders = localStorage.getItem('mn_orders');
@@ -65,41 +65,124 @@ const App: React.FC = () => {
         if (storedMessages) setMessages(JSON.parse(storedMessages));
         if (storedAllUsers) setAllUsers(JSON.parse(storedAllUsers));
       } catch (e) {
-        console.error("Critical: LocalStorage corruption detected. Resetting to defaults.", e);
+        console.error("Initialization Error:", e);
         setAllProducts(PRODUCTS);
+      } finally {
+        setActivePage('home');
+        setLoading(false);
       }
-      
-      // Force home on fresh enter to avoid 404 path issues
-      setActivePage('home');
-      setTimeout(() => setLoading(false), 2000);
     };
 
-    loadState();
+    initApp();
   }, []);
 
   const saveAllState = useCallback(() => {
-    const s = stateRef.current;
-    localStorage.setItem('mn_cart', JSON.stringify(s.cart));
-    localStorage.setItem('mn_wishlist', JSON.stringify(s.wishlist));
-    localStorage.setItem('mn_products', JSON.stringify(s.allProducts));
-    localStorage.setItem('mn_orders', JSON.stringify(s.orders));
-    localStorage.setItem('mn_tickets', JSON.stringify(s.tickets));
-    localStorage.setItem('mn_promos', JSON.stringify(s.promoCodes));
-    localStorage.setItem('mn_messages', JSON.stringify(s.messages));
-    localStorage.setItem('mn_all_users', JSON.stringify(s.allUsers));
-    if (s.currentUser) localStorage.setItem('mn_user', JSON.stringify(s.currentUser));
-    if (s.lastOrderId) localStorage.setItem('mn_last_id', s.lastOrderId);
+    try {
+      const s = stateRef.current;
+      localStorage.setItem('mn_cart', JSON.stringify(s.cart));
+      localStorage.setItem('mn_wishlist', JSON.stringify(s.wishlist));
+      localStorage.setItem('mn_products', JSON.stringify(s.allProducts));
+      localStorage.setItem('mn_orders', JSON.stringify(s.orders));
+      localStorage.setItem('mn_tickets', JSON.stringify(s.tickets));
+      localStorage.setItem('mn_promos', JSON.stringify(s.promoCodes));
+      localStorage.setItem('mn_messages', JSON.stringify(s.messages));
+      localStorage.setItem('mn_all_users', JSON.stringify(s.allUsers));
+      if (s.currentUser) {
+        localStorage.setItem('mn_user', JSON.stringify(s.currentUser));
+      } else {
+        localStorage.removeItem('mn_user');
+      }
+    } catch (e) {
+      console.error("Save Error", e);
+    }
   }, []);
 
   useEffect(() => {
-    if (loading) return;
-    const interval = setInterval(saveAllState, 10000);
-    return () => clearInterval(interval);
-  }, [loading, saveAllState]);
+    saveAllState();
+  }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, saveAllState]);
+
+  // Handlers
+  const handleAddToCart = (product: Product) => {
+    setCart(prev => {
+      const existing = prev.find(item => item.id === product.id);
+      if (existing) {
+        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      return [...prev, { ...product, quantity: 1 }];
+    });
+    setIsCartOpen(true);
+  };
+
+  const handleRemoveFromCart = (id: string) => {
+    setCart(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateQuantity = (id: string, delta: number) => {
+    setCart(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    }));
+  };
+
+  const handleToggleWishlist = (id: string) => {
+    setWishlist(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
+  };
+
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    setAllUsers(prev => {
+      if (prev.find(u => u.email === user.email)) return prev;
+      return [...prev, user];
+    });
+    setActivePage('home');
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setActivePage('home');
+  };
+
+  const handleCheckoutComplete = (data: any) => {
+    const newOrder: Order = {
+      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      country: data.country,
+      productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
+      totalAmount: data.total,
+      date: new Date().toLocaleDateString(),
+      status: data.isInstant ? 'Completed' : 'Pending',
+      paymentMethod: data.paymentMethod
+    };
+
+    if (data.isInstant && currentUser) {
+      setCurrentUser(prev => prev ? { ...prev, balance: prev.balance - data.total } : null);
+      setAllUsers(prev => prev.map(u => u.email === currentUser.email ? { ...u, balance: u.balance - data.total } : u));
+    }
+
+    setOrders(prev => [newOrder, ...prev]);
+    setCart([]);
+    setLastOrderId(newOrder.id);
+    setActivePage('account');
+  };
+
+  const handleSendTicket = (ticket: { name: string, email: string, message: string }) => {
+    const newTicket: SupportTicket = {
+      ...ticket,
+      id: Date.now().toString(),
+      date: new Date().toLocaleDateString(),
+      status: 'New'
+    };
+    setTickets(prev => [newTicket, ...prev]);
+  };
 
   const handleSendMessage = (text: string) => {
     if (!currentUser) return;
-    const msg: ChatMessage = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
       senderEmail: currentUser.email,
       senderName: currentUser.name,
@@ -107,157 +190,128 @@ const App: React.FC = () => {
       timestamp: new Date().toISOString(),
       isAdmin: false
     };
-    setMessages(prev => [...prev, msg]);
+    setMessages(prev => [...prev, newMessage]);
   };
 
   const handleAdminReply = (userEmail: string, text: string) => {
-    const msg: ChatMessage = {
+    const newMessage: ChatMessage = {
       id: Date.now().toString(),
-      senderEmail: 'admin@moonnight.com',
-      senderName: 'MoonNight Admin',
+      senderEmail: 'admin@moonnight.shop',
+      senderName: 'Admin',
       text: `[To: ${userEmail}] ${text}`,
       timestamp: new Date().toISOString(),
       isAdmin: true
     };
-    setMessages(prev => [...prev, msg]);
+    setMessages(prev => [...prev, newMessage]);
   };
 
-  const handleAuthSuccess = (user: User) => {
-    const authenticatedUser = { ...user, balance: user.balance || 0 };
-    
-    setAllUsers(prev => {
-      const exists = prev.find(u => u.email === authenticatedUser.email);
-      if (exists) return prev.map(u => u.email === exists.email ? authenticatedUser : u);
-      return [...prev, authenticatedUser];
-    });
-
-    setCurrentUser(authenticatedUser);
-    setActivePage(cart.length > 0 ? 'checkout' : 'account');
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('mn_user');
-    setActivePage('home');
-  };
-
-  const handleUpdateUserBalance = (email: string, newBalance: number) => {
-    setAllUsers(prev => prev.map(u => u.email === email ? { ...u, balance: newBalance } : u));
+  // Admin Actions
+  const handleAddProduct = (p: Product) => setAllProducts(prev => [p, ...prev]);
+  const handleUpdateProduct = (p: Product) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i));
+  const handleDeleteProduct = (id: string) => setAllProducts(prev => prev.filter(i => i.id !== id));
+  const handleUpdateOrderStatus = (id: string, status: OrderStatus) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
+  const handleUpdateTicketStatus = (id: string, status: TicketStatus) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+  const handleDeleteTicket = (id: string) => setTickets(prev => prev.filter(t => t.id !== id));
+  const handleAddPromoCode = (promo: PromoCode) => setPromoCodes(prev => [promo, ...prev]);
+  const handleDeletePromoCode = (id: string) => setPromoCodes(prev => prev.filter(p => p.id !== id));
+  const handleUpdateUserBalance = (email: string, balance: number) => {
+    setAllUsers(prev => prev.map(u => u.email === email ? { ...u, balance } : u));
     if (currentUser?.email === email) {
-      setCurrentUser(prev => prev ? { ...prev, balance: newBalance } : null);
-    }
-    // Force save immediately on balance update
-    setTimeout(saveAllState, 100);
-  };
-
-  const handleCheckoutComplete = (data: any) => {
-    const id = Math.random().toString(36).substr(2, 9).toUpperCase();
-    
-    if (data.paymentMethod === 'solde' && currentUser) {
-      const newBalance = currentUser.balance - data.total;
-      setCurrentUser(prev => prev ? { ...prev, balance: newBalance } : null);
-      setAllUsers(prev => prev.map(u => u.email === currentUser.email ? { ...u, balance: newBalance } : u));
-    }
-
-    const newOrder: Order = {
-      id,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      country: data.country,
-      productBought: cart.map(i => `${i.name} (x${i.quantity})`).join(', '),
-      totalAmount: data.total,
-      date: new Date().toLocaleString(),
-      status: data.isInstant ? 'Processing' : 'Pending',
-      appliedPromo: data.appliedPromo,
-      paymentMethod: data.paymentMethod
-    };
-
-    setOrders(prev => [newOrder, ...prev]);
-    setLastOrderId(id);
-    setCart([]);
-    setActivePage('success');
-  };
-
-  const renderPage = () => {
-    switch (activePage) {
-      case 'home': return <Home onAddToCart={(p)=>setCart(prev=>[...prev,{...p,quantity:1}])} onViewDetails={setSelectedProduct} onToggleWishlist={(id)=>setWishlist(prev=>prev.includes(id)?prev.filter(i=>i!==id):[...prev,id])} wishlist={wishlist} setActivePage={setActivePage} />;
-      case 'shop': return <Shop onAddToCart={(p)=>setCart(prev=>[...prev,{...p,quantity:1}])} onViewDetails={setSelectedProduct} onToggleWishlist={(id)=>setWishlist(prev=>prev.includes(id)?prev.filter(i=>i!==id):[...prev,id])} wishlist={wishlist} products={allProducts} />;
-      case 'contact': return <Contact onSendTicket={(t)=>setTickets(prev=>[{...t,id:Date.now().toString(),date:new Date().toLocaleString(),status:'New'},...prev])} />;
-      case 'auth': return <Auth onLogin={handleAuthSuccess} onBack={() => setActivePage('home')} />;
-      case 'account': return currentUser ? (
-        <Account 
-          user={currentUser} 
-          orders={orders} 
-          messages={messages} 
-          onSendMessage={handleSendMessage} 
-          onLogout={handleLogout}
-          isRefreshing={isRefreshingStatus}
-          onRefresh={() => { setIsRefreshingStatus(true); setTimeout(()=>setIsRefreshingStatus(false), 2000); }}
-        />
-      ) : <Auth onLogin={handleAuthSuccess} onBack={()=>setActivePage('home')} />;
-      case 'admin': return (
-        <Admin 
-          products={allProducts} 
-          orders={orders} 
-          tickets={tickets}
-          promoCodes={promoCodes}
-          messages={messages}
-          users={allUsers}
-          onUpdateUserBalance={handleUpdateUserBalance}
-          onAddProduct={(p)=>setAllProducts(prev=>[p,...prev])} 
-          onUpdateProduct={(p)=>setAllProducts(prev=>prev.map(i=>i.id===p.id?p:i))} 
-          onDeleteProduct={(id)=>setAllProducts(prev=>prev.filter(i=>i.id!==id))} 
-          onUpdateOrderStatus={(id,s)=>setOrders(prev=>prev.map(o=>o.id===id?{...o,status:s}:o))} 
-          onUpdateTicketStatus={(id,s)=>setTickets(prev=>prev.map(t=>t.id===id?{...t,status:s}:t))}
-          onDeleteTicket={(id)=>setTickets(prev=>prev.filter(t=>t.id!==id))}
-          onAddPromoCode={(p)=>setPromoCodes(prev=>[...prev,p])}
-          onDeletePromoCode={(id)=>setPromoCodes(prev=>prev.filter(p=>p.id!==id))}
-          onAdminReply={handleAdminReply}
-        />
-      );
-      case 'checkout': return <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} />;
-      case 'success': {
-        const o = orders.find(ord => ord.id === lastOrderId);
-        return (
-          <div className="pt-40 pb-24 max-w-2xl mx-auto px-4 text-center animate-fade-in">
-            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <i className="fas fa-check text-3xl text-green-500"></i>
-            </div>
-            <h1 className="text-4xl font-gaming font-bold text-white mb-6 uppercase">Commande Reçue</h1>
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-left mb-8">
-              <p className="text-sky-400 font-mono text-xl font-bold mb-4">#{o?.id}</p>
-              <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                {o?.status === 'Processing' 
-                  ? 'Paiement par Solde vérifié avec succès ! Votre livraison digitale sera bientôt disponible dans votre compte.' 
-                  : 'Vérification manuelle en cours (Méthode de paiement externe). Suivez l\'état de votre commande dans votre coffre.'}
-              </p>
-              <button onClick={()=>setActivePage('account')} className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl uppercase shadow-lg shadow-sky-500/20">Mon Espace Client</button>
-            </div>
-            <button onClick={()=>setActivePage('home')} className="text-slate-500 font-gaming uppercase text-[10px] tracking-widest hover:text-white transition-colors">Retour à l'accueil</button>
-          </div>
-        );
-      }
-      default: return <Home onAddToCart={(p)=>setCart(prev=>[...prev,{...p,quantity:1}])} onViewDetails={setSelectedProduct} onToggleWishlist={(id)=>setWishlist(prev=>prev.includes(id)?prev.filter(i=>i!==id):[...prev,id])} wishlist={wishlist} setActivePage={setActivePage} />;
+      setCurrentUser(prev => prev ? { ...prev, balance } : null);
     }
   };
 
-  if (loading) return (
-    <div className="fixed inset-0 bg-[#020617] flex flex-col items-center justify-center z-[200]">
-      <div className="relative w-24 h-24">
-         <div className="absolute inset-0 border-4 border-sky-500/10 rounded-full"></div>
-         <div className="absolute inset-0 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
-      <h2 className="mt-8 text-white font-gaming tracking-[0.5em] animate-pulse text-xs uppercase">MOONNIGHT LOADING</h2>
-    </div>
-  );
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white selection:bg-sky-500 selection:text-white">
-      <Navbar cartCount={cart.reduce((s,i)=>s+i.quantity,0)} onOpenCart={()=>setIsCartOpen(true)} activePage={activePage} setActivePage={setActivePage} user={currentUser} />
-      <main className="transition-all duration-500">{renderPage()}</main>
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-sky-500/30">
+      <Navbar 
+        cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
+        onOpenCart={() => setIsCartOpen(true)} 
+        activePage={activePage} 
+        setActivePage={setActivePage}
+        user={currentUser}
+      />
+
+      <CartSidebar 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+        items={cart} 
+        onRemove={handleRemoveFromCart} 
+        onUpdateQuantity={handleUpdateQuantity} 
+        onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }}
+      />
+
+      <main>
+        {activePage === 'home' && (
+          <Home 
+            onAddToCart={handleAddToCart} 
+            onViewDetails={(p) => setSelectedProduct(p)} 
+            onToggleWishlist={handleToggleWishlist} 
+            wishlist={wishlist} 
+            setActivePage={setActivePage}
+          />
+        )}
+        {activePage === 'shop' && (
+          <Shop 
+            products={allProducts} 
+            onAddToCart={handleAddToCart} 
+            onViewDetails={(p) => setSelectedProduct(p)} 
+            onToggleWishlist={handleToggleWishlist} 
+            wishlist={wishlist} 
+          />
+        )}
+        {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} />}
+        {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} />}
+        {activePage === 'checkout' && (
+          <Checkout 
+            cart={cart} 
+            promoCodes={promoCodes} 
+            currentUser={currentUser} 
+            onComplete={handleCheckoutComplete} 
+            onCancel={() => setActivePage('shop')} 
+          />
+        )}
+        {activePage === 'account' && currentUser && (
+          <Account 
+            user={currentUser} 
+            orders={orders} 
+            messages={messages} 
+            onSendMessage={handleSendMessage} 
+            onLogout={handleLogout} 
+            onRefresh={() => {}}
+            isRefreshing={false}
+          />
+        )}
+        {activePage === 'admin' && (
+          <Admin 
+            products={allProducts} 
+            orders={orders} 
+            tickets={tickets} 
+            promoCodes={promoCodes} 
+            messages={messages} 
+            users={allUsers}
+            onUpdateUserBalance={handleUpdateUserBalance}
+            onAddProduct={handleAddProduct}
+            onUpdateProduct={handleUpdateProduct}
+            onDeleteProduct={handleDeleteProduct}
+            onUpdateOrderStatus={handleUpdateOrderStatus}
+            onUpdateTicketStatus={handleUpdateTicketStatus}
+            onDeleteTicket={handleDeleteTicket}
+            onAddPromoCode={handleAddPromoCode}
+            onDeletePromoCode={handleDeletePromoCode}
+            onAdminReply={handleAdminReply}
+          />
+        )}
+      </main>
+
       <Footer onSecretEntrance={() => setActivePage('admin')} />
-      <CartSidebar isOpen={isCartOpen} onClose={()=>setIsCartOpen(false)} items={cart} onRemove={(id)=>setCart(prev=>prev.filter(i=>i.id!==id))} onUpdateQuantity={(id,d)=>setCart(prev=>prev.map(i=>i.id===id?{...i,quantity:Math.max(1,i.quantity+d)}:i))} onCheckout={()=>{setIsCartOpen(false);setActivePage(currentUser?'checkout':'auth');}} />
     </div>
   );
 };
