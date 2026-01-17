@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Product, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, ChatMessage, Category, User } from '../types';
 
@@ -33,7 +32,8 @@ const Admin: React.FC<AdminProps> = ({
   
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === process.env.ADMIN_PASSWORD) {
+    // Setting admin password as requested
+    if (password === 'fouad12jad1///') {
       setIsAuthenticated(true);
     } else {
       alert('Code d\'accès invalide');
@@ -42,12 +42,21 @@ const Admin: React.FC<AdminProps> = ({
 
   if (!isAuthenticated) {
     return (
-      <div className="pt-32 pb-24 max-w-md mx-auto px-4">
-        <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center shadow-2xl">
-          <h1 className="text-2xl font-gaming font-bold text-white mb-6 uppercase tracking-widest">Admin Portal</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="password" placeholder="Code d'accès" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-white text-center" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl tracking-widest">LOGIN</button>
+      <div className="pt-32 pb-24 max-w-md mx-auto px-4 animate-fade-in">
+        <div className="bg-slate-900 border border-slate-800 p-10 rounded-[2.5rem] text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 blur-[60px] -mr-16 -mt-16 rounded-full"></div>
+          <h1 className="text-2xl font-gaming font-bold text-white mb-8 uppercase tracking-widest relative z-10">Admin Access</h1>
+          <form onSubmit={handleLogin} className="space-y-4 relative z-10">
+            <div className="relative">
+              <input 
+                type="password" 
+                placeholder="Entrez le code" 
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-5 text-white text-center focus:border-sky-500 transition-all outline-none" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+              />
+            </div>
+            <button className="w-full bg-sky-500 text-white font-gaming py-5 rounded-2xl tracking-[0.2em] shadow-lg shadow-sky-500/20 hover:bg-sky-600 transition-all active:scale-95 uppercase text-xs">Authorize</button>
           </form>
         </div>
       </div>
@@ -63,7 +72,7 @@ const Admin: React.FC<AdminProps> = ({
             { id: 'catalog', label: 'Catalogue', icon: 'boxes' },
             { id: 'orders', label: 'Commandes', icon: 'shopping-cart' },
             { id: 'marketing', label: 'Promos', icon: 'tags' },
-            { id: 'users', label: 'Utilisateurs', icon: 'users' },
+            { id: 'users', label: 'Clients', icon: 'users' },
             { id: 'support', label: 'Tickets', icon: 'ticket-alt' },
             { id: 'chat', label: 'Support', icon: 'comments' },
           ].map(tab => (
@@ -78,9 +87,26 @@ const Admin: React.FC<AdminProps> = ({
           ))}
         </div>
 
-        <div className="flex-1 bg-slate-900 border border-slate-800 rounded-3xl p-8">
-           <h2 className="text-white font-gaming uppercase mb-8">System Access Granted</h2>
-           <p className="text-slate-500 text-xs">Utilisez le menu latéral pour gérer la plateforme.</p>
+        <div className="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 blur-[120px] -mr-48 -mt-48 rounded-full"></div>
+           <div className="relative z-10">
+             <h2 className="text-xl font-gaming font-bold text-white uppercase mb-8 tracking-widest">System Access Granted</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+                  <p className="text-slate-500 text-[10px] font-gaming uppercase mb-2">Total Orders</p>
+                  <p className="text-3xl font-gaming font-bold text-sky-400">{orders.length}</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+                  <p className="text-slate-500 text-[10px] font-gaming uppercase mb-2">Total Revenue</p>
+                  <p className="text-3xl font-gaming font-bold text-green-400">{orders.reduce((acc, curr) => acc + curr.totalAmount, 0).toFixed(2)} DH</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl">
+                  <p className="text-slate-500 text-[10px] font-gaming uppercase mb-2">Registered Users</p>
+                  <p className="text-3xl font-gaming font-bold text-purple-400">{users.length}</p>
+                </div>
+             </div>
+             <p className="mt-8 text-slate-500 text-xs font-gaming uppercase opacity-50">Sélectionnez une catégorie dans le menu pour gérer le système.</p>
+           </div>
         </div>
       </div>
     </div>
