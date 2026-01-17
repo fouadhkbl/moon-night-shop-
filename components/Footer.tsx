@@ -29,7 +29,7 @@ const Footer: React.FC<FooterProps> = ({ onSecretEntrance }) => {
                 M
               </div>
               <span className="text-white font-gaming text-lg font-bold">
-                MoonNight <span className="text-sky-400">Shoop</span>
+                MoonNight <span className="text-sky-400">Shop</span>
               </span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
@@ -86,7 +86,7 @@ const Footer: React.FC<FooterProps> = ({ onSecretEntrance }) => {
         
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p className="text-slate-500 text-[10px] font-gaming uppercase">
-            © 2024 MoonNight Shoop. Tous droits réservés.
+            © 2024 MoonNight Shop. Tous droits réservés.
           </p>
           <div className="flex items-center space-x-4 opacity-50 grayscale hover:grayscale-0 transition-all">
             <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />

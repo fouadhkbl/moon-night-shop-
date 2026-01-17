@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -185,6 +186,63 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-sky-500/30">
       <Navbar cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} onOpenCart={() => setIsCartOpen(true)} activePage={activePage} setActivePage={setActivePage} user={currentUser} />
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} onRemove={handleRemoveFromCart} onUpdateQuantity={handleUpdateQuantity} onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }} />
+      
+      {/* Product Details Modal */}
+      {selectedProduct && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" onClick={() => setSelectedProduct(null)}>
+          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto relative animate-scale-up shadow-2xl" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setSelectedProduct(null)} className="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-950 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center z-10 transition-colors">
+              <i className="fas fa-times"></i>
+            </button>
+            
+            <div className="flex flex-col md:flex-row">
+              <div className="md:w-1/2 p-4 sm:p-8">
+                <div className="aspect-square rounded-3xl overflow-hidden border border-slate-800 shadow-2xl relative">
+                  <img src={selectedProduct.image} className="w-full h-full object-cover" alt={selectedProduct.name} />
+                  <div className="absolute top-4 left-4 px-4 py-1.5 bg-sky-500 rounded-full text-[10px] font-gaming uppercase tracking-widest text-white">{selectedProduct.category}</div>
+                </div>
+              </div>
+              <div className="md:w-1/2 p-8 pt-4 md:p-12 md:pl-0 flex flex-col justify-center">
+                <h2 className="text-3xl font-gaming font-bold text-white mb-4 leading-tight">{selectedProduct.name}</h2>
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="text-3xl font-gaming font-bold text-sky-400">{selectedProduct.price.toFixed(2)} DH</div>
+                  {selectedProduct.originalPrice && (
+                    <div className="text-slate-500 line-through text-lg">{selectedProduct.originalPrice.toFixed(2)} DH</div>
+                  )}
+                </div>
+                
+                <p className="text-slate-400 text-sm leading-relaxed mb-8">{selectedProduct.description}</p>
+                
+                <div className="space-y-3 mb-10">
+                  <p className="text-xs font-gaming uppercase tracking-widest text-slate-500 mb-2">Technical Features:</p>
+                  {selectedProduct.features.map((f, i) => (
+                    <div key={i} className="flex items-center space-x-3 text-sm text-slate-300">
+                      <i className="fas fa-check-circle text-sky-500 text-xs"></i>
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex space-x-4">
+                  <button 
+                    onClick={() => { handleAddToCart(selectedProduct); setSelectedProduct(null); }}
+                    className="flex-1 bg-sky-500 text-white font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-sky-500/20 hover:bg-sky-600 transition-all active:scale-[0.98]"
+                  >
+                    DEPLOY ASSET (BUY)
+                  </button>
+                  <button 
+                    onClick={() => handleToggleWishlist(selectedProduct.id)}
+                    className={`w-16 rounded-2xl border flex items-center justify-center transition-all ${wishlist.includes(selectedProduct.id) ? 'border-red-500/40 text-red-500 bg-red-500/5' : 'border-slate-800 text-slate-500 hover:text-white hover:border-slate-700'}`}
+                  >
+                    <i className="fas fa-heart"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main>
         {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} />}
         {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} />}

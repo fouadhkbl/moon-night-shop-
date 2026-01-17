@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 
@@ -20,7 +21,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId);
-    setIsMenuOpen(false); // Fix: Closes menu after selection on mobile
+    setIsMenuOpen(false); 
   };
 
   return (
@@ -36,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-pulse shadow-sm"></div>
             </div>
             <span className="text-white font-gaming text-lg sm:text-xl font-bold tracking-tight">
-              MoonNight <span className="text-sky-400">Shoop</span>
+              MoonNight <span className="text-sky-400">Shop</span>
             </span>
           </div>
 

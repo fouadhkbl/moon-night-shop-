@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 
@@ -31,7 +32,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
     if (mode === 'signup' && existingUser) {
       setError("ERREUR: Un compte avec cet email existe déjà. Veuillez vous connecter.");
       setIsLoading(false);
-      setMode('login'); // Automatically switch to login to assist the user
+      setMode('login'); 
       return;
     }
 
@@ -57,7 +58,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
     };
 
     try {
-      // Log authentication event to central management
       await fetch('https://script.google.com/macros/s/AKfycbxo83LQBoTFgEMld7HcZ4FGUdTrnbM9wGvpH_5q77K-1OG18RqFaddk3AjfvWKsqpUy/exec', {
         method: 'POST',
         mode: 'no-cors', 
@@ -110,51 +110,52 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
   }
 
   return (
-    <div className="pt-32 pb-24 max-w-md mx-auto px-4 animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
-        <div className="text-center mb-10">
-          <h1 className="text-2xl font-gaming font-bold text-white uppercase tracking-widest mb-1">
-            MoonNight <span className="text-sky-400">Auth</span>
+    <div className="pt-32 pb-24 max-w-xl mx-auto px-4 animate-fade-in">
+      <div className="bg-slate-900 border border-slate-800 p-8 md:p-14 rounded-[3.5rem] shadow-2xl relative overflow-hidden">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-gaming font-black text-white uppercase tracking-tighter mb-2">
+            MoonNight <span className="text-sky-400">Shop</span>
           </h1>
-          <p className="text-slate-500 text-[8px] font-gaming uppercase tracking-[0.4em]">Espace Sécurisé</p>
+          <div className="h-1 w-20 bg-sky-500 mx-auto rounded-full mb-4"></div>
+          <p className="text-slate-500 text-[10px] font-gaming uppercase tracking-[0.6em]">Secure Authentication Gateway</p>
         </div>
 
-        <div className="flex bg-slate-950 p-1.5 rounded-2xl mb-8 border border-slate-800">
-          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-3.5 rounded-xl text-[9px] font-gaming uppercase tracking-widest transition-all ${mode === 'login' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/10' : 'text-slate-500 hover:text-white'}`}>Connexion</button>
-          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-3.5 rounded-xl text-[9px] font-gaming uppercase tracking-widest transition-all ${mode === 'signup' ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/10' : 'text-slate-500 hover:text-white'}`}>Inscription</button>
+        <div className="flex bg-slate-950 p-2 rounded-[1.5rem] mb-10 border border-slate-800">
+          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-4 rounded-2xl text-[10px] font-gaming uppercase tracking-widest transition-all ${mode === 'login' ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-white'}`}>Connexion</button>
+          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-4 rounded-2xl text-[10px] font-gaming uppercase tracking-widest transition-all ${mode === 'signup' ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-white'}`}>Inscription</button>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-            <p className="text-red-500 text-[9px] font-gaming text-center uppercase tracking-widest leading-relaxed">{error}</p>
+          <div className="mb-8 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-red-500 text-[10px] font-gaming text-center uppercase tracking-widest leading-relaxed">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {mode === 'signup' && (
             <div className="animate-slide-up">
-              <label className="block text-slate-500 text-[8px] font-gaming uppercase mb-2 ml-2">Pseudo / Nom</label>
-              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-xs focus:border-sky-500 outline-none transition-all" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-3 ml-3 tracking-widest">Display Name</label>
+              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-3xl px-8 py-5 text-white text-sm focus:border-sky-500 outline-none transition-all shadow-inner" placeholder="E.g. Ghost_Gamer" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
           )}
           <div className="animate-slide-up">
-            <label className="block text-slate-500 text-[8px] font-gaming uppercase mb-2 ml-2">Email</label>
-            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-xs focus:border-sky-500 outline-none transition-all" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-3 ml-3 tracking-widest">Email Address</label>
+            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-3xl px-8 py-5 text-white text-sm focus:border-sky-500 outline-none transition-all shadow-inner" placeholder="user@example.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
           {mode !== 'forgot' && (
             <div className="animate-slide-up">
-              <label className="block text-slate-500 text-[8px] font-gaming uppercase mb-2 ml-2">Mot de Passe</label>
-              <input required type="password" placeholder="••••••••" className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-xs focus:border-sky-500 outline-none transition-all" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-              {mode === 'login' && <button type="button" onClick={() => setMode('forgot')} className="mt-3 ml-2 text-[8px] font-gaming uppercase text-sky-500/60 hover:text-sky-400 tracking-widest">Mot de passe oublié ?</button>}
+              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-3 ml-3 tracking-widest">Security Password</label>
+              <input required type="password" placeholder="••••••••••••" className="w-full bg-slate-950 border border-slate-800 rounded-3xl px-8 py-5 text-white text-sm focus:border-sky-500 outline-none transition-all shadow-inner" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+              {mode === 'login' && <button type="button" onClick={() => setMode('forgot')} className="mt-4 ml-3 text-[9px] font-gaming uppercase text-sky-500/60 hover:text-sky-400 tracking-widest transition-colors">Forgot Access Code?</button>}
             </div>
           )}
-          <button disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20 active:scale-[0.98] group overflow-hidden relative">
+          <button disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming py-6 rounded-3xl text-[12px] font-bold uppercase tracking-[0.3em] hover:bg-sky-600 transition-all shadow-2xl shadow-sky-500/30 active:scale-[0.98] group overflow-hidden relative">
             <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite_linear]" style={{ backgroundSize: '200% 100%' }} />
-            <span className="relative">{isLoading ? 'INITIATION...' : (mode === 'login' ? 'ENTRER' : mode === 'signup' ? 'CRÉER LE COMPTE' : 'ENVOYER LE LIEN')}</span>
+            <span className="relative">{isLoading ? 'PROCESSING...' : (mode === 'login' ? 'ENTER SYSTEM' : mode === 'signup' ? 'CREATE IDENTITY' : 'SEND RESET LINK')}</span>
           </button>
         </form>
 
-        <button onClick={onBack} className="mt-8 w-full text-[8px] font-gaming text-slate-500 hover:text-sky-400 uppercase tracking-widest text-center transition-colors">Retour à la boutique</button>
+        <button onClick={onBack} className="mt-10 w-full text-[10px] font-gaming text-slate-500 hover:text-sky-400 uppercase tracking-widest text-center transition-colors">Abort & Return to Marketplace</button>
       </div>
     </div>
   );
