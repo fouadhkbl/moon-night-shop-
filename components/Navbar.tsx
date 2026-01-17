@@ -19,20 +19,25 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
     { id: 'contact', label: 'Support' },
   ];
 
+  const handlePageChange = (pageId: string) => {
+    setActivePage(pageId);
+    setIsMenuOpen(false); // Close menu on selection
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-sky-500/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
-            onClick={() => setActivePage('home')}
+            onClick={() => handlePageChange('home')}
           >
             {/* Dynamic CSS Logo */}
             <div className="relative w-10 h-10 flex-shrink-0 bg-gradient-to-br from-sky-500 to-purple-600 rounded-xl shadow-lg shadow-sky-500/20 flex items-center justify-center transform group-hover:rotate-12 transition-all duration-300">
               <span className="text-white font-gaming font-bold text-xl">M</span>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-pulse shadow-sm"></div>
             </div>
-            <span className="text-white font-gaming text-xl font-bold tracking-tight">
+            <span className="text-white font-gaming text-lg sm:text-xl font-bold tracking-tight">
               MoonNight <span className="text-sky-400">Shoop</span>
             </span>
           </div>
@@ -41,7 +46,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
             {navLinks.map((link) => (
               <button
                 key={link.id}
-                onClick={() => setActivePage(link.id)}
+                onClick={() => handlePageChange(link.id)}
                 className={`text-sm font-gaming uppercase tracking-widest transition-colors ${
                   activePage === link.id ? 'text-sky-400 neon-text-blue' : 'text-slate-300 hover:text-white'
                 }`}
@@ -51,13 +56,13 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
             ))}
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <button 
-              onClick={() => setActivePage(user ? 'account' : 'auth')}
+              onClick={() => handlePageChange(user ? 'account' : 'auth')}
               className={`p-2 transition-all flex items-center space-x-2 ${user ? 'text-sky-400' : 'text-slate-300 hover:text-sky-400'}`}
             >
               <div className="relative">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 {user && (
@@ -75,11 +80,11 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
               onClick={onOpenCart}
               className="relative p-2 text-slate-300 hover:text-sky-400 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 sm:w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-sky-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-slate-900">
+                <span className="absolute top-0 right-0 bg-sky-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-slate-900">
                   {cartCount}
                 </span>
               )}
@@ -90,7 +95,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
               </svg>
             </button>
           </div>
@@ -98,16 +103,13 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden glass border-t border-sky-500/20 py-4">
-          <div className="flex flex-col space-y-4 px-6">
+        <div className="md:hidden glass border-t border-sky-500/20 py-6 animate-fade-in">
+          <div className="flex flex-col space-y-6 px-6">
             {navLinks.map((link) => (
               <button
                 key={link.id}
-                onClick={() => {
-                  setActivePage(link.id);
-                  setIsMenuOpen(false);
-                }}
-                className={`text-left text-sm font-gaming uppercase tracking-widest ${
+                onClick={() => handlePageChange(link.id)}
+                className={`text-left text-sm font-gaming uppercase tracking-[0.2em] py-2 ${
                   activePage === link.id ? 'text-sky-400' : 'text-slate-300'
                 }`}
               >
