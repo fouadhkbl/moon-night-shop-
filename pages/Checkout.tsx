@@ -62,7 +62,8 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
     email: currentUser.email || '',
     country: 'Maroc',
   });
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'solde' | 'paypal'>('paypal');
+  
+  const [paymentMethod, setPaymentMethod] = useState<'solde' | 'paypal' | 'card'>('paypal');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isPaypalReady, setIsPaypalReady] = useState(false);
@@ -76,39 +77,51 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
   const totalAmountMAD = subtotalAmountMAD - discountAmount;
 
   const paypalContainerRef = useRef<HTMLDivElement>(null);
-  const paypalButtonsInitializedRef = useRef<boolean>(false);
+  const paypalInstanceRef = useRef<any>(null);
 
   const isExternalPayment = paymentMethod === 'paypal' || paymentMethod === 'card';
 
   useEffect(() => {
     let isMounted = true;
     
+    // Clean up previous instance if exists
+    if (paypalInstanceRef.current) {
+      if (paypalContainerRef.current) paypalContainerRef.current.innerHTML = '';
+      paypalInstanceRef.current = null;
+    }
+
+    // If not in review, or not external, or terms not agreed, don't try to render
     if (step !== 'review' || !isExternalPayment || !agreedToTerms) {
-      paypalButtonsInitializedRef.current = false;
+      setIsPaypalReady(false);
       return;
     }
 
     const initPaypalFlow = async () => {
+      // Small delay to ensure the container is rendered in the DOM by React
+      await new Promise(r => setTimeout(r, 150));
+      
+      if (!isMounted) return;
+
       try {
         const paypal = (window as any).paypal;
         if (!paypal) {
-          if (isMounted) setPaypalError("Erreur: SDK de paiement non disponible.");
+          if (isMounted) setPaypalError("SDK de paiement indisponible. Veuillez rafraîchir la page.");
           return;
         }
 
-        if (paypalContainerRef.current && !paypalButtonsInitializedRef.current) {
-          paypalButtonsInitializedRef.current = true;
+        if (paypalContainerRef.current) {
           paypalContainerRef.current.innerHTML = ''; 
           setPaypalError(null);
           setIsPaypalReady(false);
 
           const config = {
+            fundingSource: paymentMethod === 'card' ? paypal.FUNDING.CARD : paypal.FUNDING.PAYPAL,
             createOrder: (data: any, actions: any) => {
               const totalUSD = (totalAmountMAD * 0.1).toFixed(2);
               return actions.order.create({
                 purchase_units: [{
                   amount: { currency_code: 'USD', value: totalUSD },
-                  description: `MoonNight Payment (${paymentMethod.toUpperCase()}) - ${currentUser.email}`
+                  description: `MoonNight Shop Order - ${currentUser.email}`
                 }]
               });
             },
@@ -121,7 +134,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
               } catch (e) {
                 console.error("Capture Error:", e);
                 if (isMounted) {
-                  setPaypalError("La transaction n'a pas pu être finalisée.");
+                  setPaypalError("La transaction n'a pas pu être finalisée. Réessayez.");
                   setIsSubmitting(false);
                 }
               }
@@ -132,8 +145,8 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
             onError: (err: any) => {
               console.error("Payment Gateway Error:", err);
               if (isMounted) {
-                setPaypalError("Connexion au portail de paiement échouée.");
-                paypalButtonsInitializedRef.current = false;
+                setPaypalError("Erreur lors de la connexion au portail sécurisé.");
+                setIsPaypalReady(false);
               }
             },
             style: {
@@ -147,23 +160,24 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
 
           const button = paypal.Buttons(config);
           if (button.isEligible()) {
+            paypalInstanceRef.current = button;
             await button.render(paypalContainerRef.current);
           } else {
-            if (isMounted) setPaypalError("Ce mode n'est pas disponible sur cet appareil.");
+            if (isMounted) setPaypalError("Ce mode de paiement n'est pas éligible pour votre session.");
           }
         }
       } catch (err) {
         console.error("Gateway Init Exception:", err);
-        if (isMounted) setPaypalError("Erreur système de paiement.");
+        if (isMounted) setPaypalError("Erreur d'initialisation du module de paiement.");
       }
     };
 
-    const timer = setTimeout(initPaypalFlow, 400);
+    initPaypalFlow();
+    
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
-  }, [step, paymentMethod, agreedToTerms, totalAmountMAD, isExternalPayment]);
+  }, [step, paymentMethod, agreedToTerms, totalAmountMAD, isExternalPayment, currentUser.email]);
 
   const handleApplyPromo = () => {
     const code = promoInput.toUpperCase().trim();
@@ -198,7 +212,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
       onComplete({ ...formData, total: totalAmountMAD, appliedPromo: appliedPromo?.code, paymentMethod, isInstant });
     } catch (error) {
       console.error("Submit error:", error);
-      alert("Erreur technique lors de la validation.");
+      alert("Erreur de synchronisation avec le serveur MoonNight.");
     } finally {
       setIsSubmitting(false);
     }
@@ -239,38 +253,38 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
                 <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-1 ml-1">Code de réduction</label>
                 <div className="flex space-x-2">
                   <input placeholder="MOONNIGHT24" className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-white text-xs font-gaming uppercase outline-none" value={promoInput} onChange={(e) => setPromoInput(e.target.value)} />
-                  <button type="button" onClick={handleApplyPromo} className="bg-sky-500 px-6 rounded-xl text-[10px] font-gaming text-white uppercase hover:bg-sky-600">Vérifier</button>
+                  <button type="button" onClick={handleApplyPromo} className="bg-sky-500 px-6 rounded-xl text-[10px] font-gaming text-white uppercase hover:bg-sky-600 transition-all active:scale-95">Vérifier</button>
                 </div>
               </div>
 
               <div>
                 <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-4 ml-1">Mode de règlement</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button type="button" onClick={() => setPaymentMethod('solde')} className={`flex flex-col items-center p-5 rounded-3xl border-2 transition-all ${paymentMethod === 'solde' ? 'bg-green-500/10 border-green-500 shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
-                    <i className={`fas fa-wallet text-xl mb-2 ${paymentMethod === 'solde' ? 'text-green-400' : 'text-slate-500'}`}></i>
-                    <span className="font-gaming text-[10px] uppercase">Solde</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <button type="button" onClick={() => setPaymentMethod('solde')} className={`flex flex-col items-center p-6 rounded-3xl border-2 transition-all ${paymentMethod === 'solde' ? 'bg-green-500/10 border-green-500 shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
+                    <i className={`fas fa-wallet text-2xl mb-2 ${paymentMethod === 'solde' ? 'text-green-400' : 'text-slate-500'}`}></i>
+                    <span className="font-gaming text-[9px] uppercase">Solde</span>
                   </button>
-                  <button type="button" onClick={() => setPaymentMethod('paypal')} className={`flex flex-col items-center p-5 rounded-3xl border-2 transition-all ${paymentMethod === 'paypal' ? 'bg-[#ffc439]/10 border-[#ffc439] shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
-                    <i className={`fab fa-paypal text-xl mb-2 ${paymentMethod === 'paypal' ? 'text-[#ffc439]' : 'text-slate-500'}`}></i>
-                    <span className={`font-gaming text-[10px] uppercase ${paymentMethod === 'paypal' ? 'text-[#ffc439]' : 'text-slate-500'}`}>PayPal</span>
+                  <button type="button" onClick={() => setPaymentMethod('paypal')} className={`flex flex-col items-center p-6 rounded-3xl border-2 transition-all ${paymentMethod === 'paypal' ? 'bg-[#ffc439]/10 border-[#ffc439] shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
+                    <i className={`fab fa-paypal text-2xl mb-2 ${paymentMethod === 'paypal' ? 'text-[#ffc439]' : 'text-slate-500'}`}></i>
+                    <span className={`font-gaming text-[9px] uppercase ${paymentMethod === 'paypal' ? 'text-[#ffc439]' : 'text-slate-500'}`}>PayPal</span>
                   </button>
-                  <button type="button" onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center p-5 rounded-3xl border-2 transition-all ${paymentMethod === 'card' ? 'bg-sky-500/10 border-sky-500 shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
-                    <i className={`fas fa-credit-card text-xl mb-2 ${paymentMethod === 'card' ? 'text-sky-400' : 'text-slate-500'}`}></i>
-                    <span className="font-gaming text-[10px] uppercase">Carte</span>
+                  <button type="button" onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center p-6 rounded-3xl border-2 transition-all ${paymentMethod === 'card' ? 'bg-sky-500/10 border-sky-500 shadow-lg' : 'bg-slate-950 border-slate-800'}`}>
+                    <i className={`fas fa-credit-card text-2xl mb-2 ${paymentMethod === 'card' ? 'text-sky-400' : 'text-slate-500'}`}></i>
+                    <span className={`font-gaming text-[9px] uppercase ${paymentMethod === 'card' ? 'text-sky-400' : 'text-slate-500'}`}>Carte</span>
                   </button>
                 </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button type="button" onClick={onCancel} className="sm:flex-1 bg-slate-950 text-slate-400 font-gaming text-[10px] py-4 rounded-xl border border-slate-800 uppercase tracking-widest">Boutique</button>
-                <button type="submit" className="sm:flex-[2] bg-sky-500 text-white font-gaming text-[10px] py-4 rounded-xl shadow-xl hover:bg-sky-600 uppercase">Commander</button>
+                <button type="button" onClick={onCancel} className="sm:flex-1 bg-slate-950 text-slate-400 font-gaming text-[10px] py-4 rounded-xl border border-slate-800 uppercase tracking-widest hover:text-white transition-colors">Boutique</button>
+                <button type="submit" className="sm:flex-[2] bg-sky-500 text-white font-gaming text-[10px] py-4 rounded-xl shadow-xl hover:bg-sky-600 uppercase tracking-widest active:scale-[0.98] transition-all">Suivant</button>
               </div>
             </form>
           ) : (
             <div className="animate-fade-in space-y-8">
               <div className="text-center">
                 <h2 className="text-2xl font-gaming font-bold text-white uppercase tracking-widest mb-1">Résumé Final</h2>
-                <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em]">Sécurité Garanti par MoonNight Shop</p>
+                <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em]">Transaction Sécurisée MoonNight Shop</p>
               </div>
 
               <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-3">
@@ -293,43 +307,57 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
               </div>
 
               <div className="space-y-6">
-                <label className="flex items-start space-x-4 cursor-pointer p-5 rounded-3xl bg-slate-950 border border-slate-800 hover:border-sky-500/20 transition-all">
-                  <input type="checkbox" className="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-sky-500 focus:ring-0" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
-                  <span className="text-slate-400 text-[9px] leading-relaxed select-none">
+                <label className="flex items-start space-x-4 cursor-pointer p-5 rounded-3xl bg-slate-950 border border-slate-800 hover:border-sky-500/20 transition-all group">
+                  <input type="checkbox" className="mt-1 w-5 h-5 rounded border-slate-800 bg-slate-950 text-sky-500 focus:ring-0 cursor-pointer" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
+                  <span className="text-slate-400 text-[9px] leading-relaxed select-none group-hover:text-slate-300">
                     Je reconnais que l'achat de produits digitaux est ferme et définitif. Livraison immédiate par email après confirmation de MoonNight Shop.
                   </span>
                 </label>
 
                 <div className="flex flex-col space-y-4">
-                  <div className={`w-full flex flex-col items-center transition-all ${isExternalPayment && agreedToTerms ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none absolute -z-10 h-0 overflow-hidden'}`}>
-                     {paypalError && (
-                       <div className="w-full p-4 bg-red-500/10 border border-red-500/20 rounded-2xl mb-4 text-center">
-                         <p className="text-red-500 text-[10px] font-gaming uppercase">{paypalError}</p>
-                         <button onClick={() => { setAgreedToTerms(false); setTimeout(() => setAgreedToTerms(true), 200); }} className="mt-2 text-sky-400 text-[9px] font-gaming uppercase underline">Réessayer</button>
-                       </div>
-                     )}
-                     <div id="paypal-button-container" ref={paypalContainerRef} className="w-full max-w-sm min-h-[120px] flex flex-col items-center justify-center bg-slate-950/30 rounded-3xl border border-slate-800/50">
-                        {!isPaypalReady && !paypalError && <div className="text-sky-500 text-[9px] font-gaming uppercase py-8 animate-pulse tracking-widest">Initialisation sécurisée...</div>}
-                     </div>
-                     {isSubmitting && <p className="text-sky-400 text-[9px] font-gaming uppercase mt-4 animate-pulse">Finalisation en cours...</p>}
-                  </div>
+                  {isExternalPayment && agreedToTerms && (
+                    <div className="w-full flex flex-col items-center animate-fade-in">
+                      {paypalError && (
+                        <div className="w-full p-4 bg-red-500/10 border border-red-500/20 rounded-2xl mb-4 text-center">
+                          <p className="text-red-500 text-[10px] font-gaming uppercase">{paypalError}</p>
+                          <button onClick={() => { setAgreedToTerms(false); setTimeout(() => setAgreedToTerms(true), 200); }} className="mt-2 text-sky-400 text-[9px] font-gaming uppercase underline tracking-widest">Réessayer</button>
+                        </div>
+                      )}
+                      
+                      <div className="w-full max-w-sm flex flex-col items-center">
+                        <div id="paypal-button-container" ref={paypalContainerRef} className="w-full min-h-[140px] bg-slate-950/30 rounded-3xl border border-slate-800/50 flex items-center justify-center p-6">
+                           {!isPaypalReady && !paypalError && (
+                             <div className="flex flex-col items-center space-y-3">
+                               <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+                               <div className="text-sky-500 text-[9px] font-gaming uppercase animate-pulse tracking-widest">Initialisation Passerelle...</div>
+                             </div>
+                           )}
+                        </div>
+                        {isPaypalReady && !isSubmitting && (
+                          <p className="text-slate-500 text-[8px] font-gaming uppercase mt-3 tracking-widest opacity-50">Sécurisé par protocole SSL/TLS</p>
+                        )}
+                      </div>
+                      
+                      {isSubmitting && <p className="text-sky-400 text-[9px] font-gaming uppercase mt-4 animate-pulse tracking-widest">Validation de la transaction...</p>}
+                    </div>
+                  )}
 
                   {(!(isExternalPayment && agreedToTerms)) && (
                     <div className="flex flex-col sm:flex-row gap-4 w-full animate-fade-in">
-                      <button onClick={() => setStep('billing')} className="sm:flex-1 bg-slate-950 text-slate-400 font-gaming text-[10px] py-4 rounded-xl border border-slate-800 uppercase tracking-widest">Retour</button>
+                      <button onClick={() => setStep('billing')} className="sm:flex-1 bg-slate-950 text-slate-400 font-gaming text-[10px] py-4 rounded-xl border border-slate-800 uppercase tracking-widest hover:text-white transition-colors">Retour</button>
                       <button 
                         disabled={!agreedToTerms || isSubmitting || (paymentMethod === 'solde' && (currentUser?.balance || 0) < totalAmountMAD)}
                         onClick={() => handleFinalSubmit(false)}
                         className={`sm:flex-[2] font-gaming text-[10px] py-4 rounded-xl shadow-xl transition-all uppercase tracking-widest ${
-                          isExternalPayment 
-                            ? 'bg-[#ffc439] !text-[#003087] hover:bg-[#f4bb3a] shadow-[#ffc439]/10' 
-                            : 'bg-sky-500 text-white hover:bg-sky-600'
+                          paymentMethod === 'paypal' ? 'bg-[#ffc439] !text-[#003087] hover:bg-[#f4bb3a]' :
+                          paymentMethod === 'card' ? 'bg-white !text-black hover:bg-slate-100' :
+                          'bg-sky-500 text-white hover:bg-sky-600'
                         } disabled:opacity-40 disabled:grayscale cursor-pointer`}
                       >
                         {isSubmitting ? 'INITIATION...' : 
-                          isExternalPayment 
-                            ? `DÉMARRER LE PAIEMENT ${paymentMethod.toUpperCase()}` 
-                            : `CONFIRMER ET PAYER (${totalAmountMAD.toFixed(2)} DH)`
+                          paymentMethod === 'paypal' ? `ACTIVER PAYPAL` :
+                          paymentMethod === 'card' ? `ACTIVER CARTE BANCAIRE` :
+                          `CONFIRMER ET PAYER (${totalAmountMAD.toFixed(2)} DH)`
                         }
                       </button>
                     </div>

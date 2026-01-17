@@ -138,10 +138,6 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
                   <span>Subtotal</span>
                   <span>{total.toFixed(2)} MAD</span>
                 </div>
-                <div className="flex justify-between items-center text-xs uppercase font-gaming tracking-widest text-slate-500">
-                  <span>Processing Fee</span>
-                  <span className="text-green-500">Free</span>
-                </div>
                 <div className="pt-4 border-t border-slate-800/50 flex justify-between items-center">
                   <span className="text-white font-gaming text-sm uppercase tracking-[0.2em]">Total Credits</span>
                   <span className="text-white text-3xl font-gaming neon-text-blue font-bold tracking-tighter">
