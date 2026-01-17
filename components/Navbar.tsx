@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
 
@@ -21,7 +20,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId);
-    setIsMenuOpen(false); // Close menu on selection
+    setIsMenuOpen(false); // Fix: Closes menu after selection on mobile
   };
 
   return (
@@ -32,7 +31,6 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => handlePageChange('home')}
           >
-            {/* Dynamic CSS Logo */}
             <div className="relative w-10 h-10 flex-shrink-0 bg-gradient-to-br from-sky-500 to-purple-600 rounded-xl shadow-lg shadow-sky-500/20 flex items-center justify-center transform group-hover:rotate-12 transition-all duration-300">
               <span className="text-white font-gaming font-bold text-xl">M</span>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full animate-pulse shadow-sm"></div>
@@ -103,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden glass border-t border-sky-500/20 py-6 animate-fade-in">
+        <div className="md:hidden glass border-t border-sky-500/20 py-6 animate-fade-in shadow-2xl">
           <div className="flex flex-col space-y-6 px-6">
             {navLinks.map((link) => (
               <button

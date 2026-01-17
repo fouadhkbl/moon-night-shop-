@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { PRODUCTS } from '../constants';
 import ProductCard from '../components/ProductCard';
@@ -18,16 +17,16 @@ const Home: React.FC<HomeProps> = ({ onAddToCart, onViewDetails, onToggleWishlis
   return (
     <div className="space-y-16 sm:space-y-32 pb-24">
       {/* Hero Section */}
-      <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center pt-24 pb-12">
+      <section className="relative min-h-[85vh] sm:min-h-[90vh] flex items-center pt-24 pb-12 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-slate-950" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-sky-500/10 via-transparent to-transparent opacity-50" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[800px] h-[300px] sm:h-[800px] bg-sky-500/5 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] sm:w-[800px] h-[250px] sm:h-[800px] bg-sky-500/5 rounded-full blur-[80px] sm:blur-[120px] animate-pulse" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           <div className="max-w-3xl text-center sm:text-left">
-            <div className="inline-flex items-center space-x-2 bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 rounded-full text-sky-400 text-[10px] font-gaming uppercase tracking-[0.2em] mb-6 sm:mb-8 animate-fade-in">
+            <div className="inline-flex items-center space-x-2 bg-sky-500/10 border border-sky-500/20 px-3 py-1.5 rounded-full text-sky-400 text-[9px] sm:text-[10px] font-gaming uppercase tracking-[0.2em] mb-6 sm:mb-8 animate-fade-in">
               <span className="w-2 h-2 bg-sky-400 rounded-full animate-ping" />
               <span>Next Gen Marketplace</span>
             </div>
@@ -37,9 +36,23 @@ const Home: React.FC<HomeProps> = ({ onAddToCart, onViewDetails, onToggleWishlis
                 YOUR GAME
               </span>
             </h1>
-            <p className="text-base sm:text-xl text-slate-400 mb-8 sm:mb-10 leading-relaxed max-w-2xl mx-auto sm:mx-0 animate-slide-up">
+            <p className="text-sm sm:text-xl text-slate-400 mb-8 sm:mb-10 leading-relaxed max-w-2xl mx-auto sm:mx-0 animate-slide-up">
               Instant delivery of digital games, high-tier accounts, and gift cards. Trusted by 15k+ gamers globally.
             </p>
+            
+            {/* Trust Badges - Mobile Optimized */}
+            <div className="flex flex-wrap justify-center sm:justify-start gap-4 mb-10 animate-slide-up">
+              <div className="flex items-center space-x-2 text-[9px] font-gaming uppercase tracking-widest text-slate-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-800">
+                <span>🔒 Secure Payment</span>
+              </div>
+              <div className="flex items-center space-x-2 text-[9px] font-gaming uppercase tracking-widest text-slate-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-800">
+                <span>⚡ Instant Delivery</span>
+              </div>
+              <div className="flex items-center space-x-2 text-[9px] font-gaming uppercase tracking-widest text-slate-400 bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-800">
+                <span>🛡️ Money-Back</span>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 animate-slide-up">
               <button 
                 onClick={() => setActivePage('shop')}
@@ -62,27 +75,6 @@ const Home: React.FC<HomeProps> = ({ onAddToCart, onViewDetails, onToggleWishlis
             </div>
           </div>
         </div>
-
-        {/* Floating elements hidden on smallest mobile */}
-        <div className="absolute right-0 bottom-0 top-0 w-1/2 hidden lg:flex items-center justify-center opacity-40 animate-fade-in">
-           <div className="relative w-96 h-96">
-             <div className="absolute inset-0 bg-sky-500 rounded-full blur-[100px] opacity-20" />
-             <div className="absolute inset-0 border-4 border-sky-400/20 rounded-full animate-spin-slow" />
-             <div className="absolute inset-0 flex items-center justify-center animate-float">
-                <div className="w-64 h-64 glass rounded-3xl p-8 flex flex-col justify-between shadow-2xl">
-                  <div className="w-12 h-12 bg-sky-500 rounded-xl shadow-lg shadow-sky-500/50" />
-                  <div className="space-y-4">
-                    <div className="h-4 w-full bg-slate-700/50 rounded" />
-                    <div className="h-4 w-3/4 bg-slate-700/50 rounded" />
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="h-6 w-20 bg-sky-400/50 rounded" />
-                    <div className="w-8 h-8 bg-slate-700/50 rounded-full" />
-                  </div>
-                </div>
-             </div>
-           </div>
-        </div>
       </section>
 
       {/* Stats Section */}
@@ -94,10 +86,10 @@ const Home: React.FC<HomeProps> = ({ onAddToCart, onViewDetails, onToggleWishlis
             { label: 'Products', value: '1.2k', icon: '📦' },
           ].map((stat, idx) => (
             <div key={idx} className="bg-slate-900/40 border border-slate-800/50 rounded-2xl p-6 flex items-center sm:block text-left sm:text-center hover:border-sky-500/30 transition-all animate-slide-up" style={{ animationDelay: `${idx * 0.1}s` }}>
-              <span className="text-3xl mr-4 sm:mr-0 sm:mb-4 block">{stat.icon}</span>
+              <span className="text-2xl sm:text-3xl mr-4 sm:mr-0 sm:mb-4 block">{stat.icon}</span>
               <div>
-                <div className="text-2xl sm:text-3xl font-gaming font-bold text-white mb-0.5">{stat.value}</div>
-                <div className="text-[10px] font-gaming text-slate-500 uppercase tracking-widest">{stat.label}</div>
+                <div className="text-xl sm:text-3xl font-gaming font-bold text-white mb-0.5">{stat.value}</div>
+                <div className="text-[9px] sm:text-[10px] font-gaming text-slate-500 uppercase tracking-widest">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -117,7 +109,7 @@ const Home: React.FC<HomeProps> = ({ onAddToCart, onViewDetails, onToggleWishlis
           </div>
           <button 
             onClick={() => setActivePage('shop')}
-            className="text-sky-400 font-gaming text-[10px] sm:text-sm uppercase tracking-widest hover:text-sky-300 flex items-center group transition-colors"
+            className="text-sky-400 font-gaming text-[9px] sm:text-sm uppercase tracking-widest hover:text-sky-300 flex items-center group transition-colors"
           >
             <span>View Marketplace</span>
             <svg className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">

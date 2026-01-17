@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -13,7 +12,6 @@ import Account from './pages/Account';
 import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage } from './types';
 import { PRODUCTS } from './constants';
 
-// Completed App component with full state management and default export
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
@@ -22,7 +20,6 @@ const App: React.FC = () => {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [lastOrderId, setLastOrderId] = useState<string | null>(null);
-  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -68,7 +65,6 @@ const App: React.FC = () => {
         console.error("Initialization Error:", e);
         setAllProducts(PRODUCTS);
       } finally {
-        setActivePage('home');
         setLoading(false);
       }
     };
@@ -101,7 +97,6 @@ const App: React.FC = () => {
     saveAllState();
   }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, saveAllState]);
 
-  // Handlers
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
@@ -113,23 +108,9 @@ const App: React.FC = () => {
     setIsCartOpen(true);
   };
 
-  const handleRemoveFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleUpdateQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: newQty };
-      }
-      return item;
-    }));
-  };
-
-  const handleToggleWishlist = (id: string) => {
-    setWishlist(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
-  };
+  const handleRemoveFromCart = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
+  const handleUpdateQuantity = (id: string, delta: number) => setCart(prev => prev.map(item => item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item));
+  const handleToggleWishlist = (id: string) => setWishlist(prev => prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -159,9 +140,10 @@ const App: React.FC = () => {
       paymentMethod: data.paymentMethod
     };
 
-    if (data.isInstant && currentUser) {
-      setCurrentUser(prev => prev ? { ...prev, balance: prev.balance - data.total } : null);
-      setAllUsers(prev => prev.map(u => u.email === currentUser.email ? { ...u, balance: u.balance - data.total } : u));
+    if (data.isInstant && data.paymentMethod === 'solde' && currentUser) {
+      const updatedBalance = currentUser.balance - data.total;
+      setCurrentUser(prev => prev ? { ...prev, balance: updatedBalance } : null);
+      setAllUsers(prev => prev.map(u => u.email === currentUser.email ? { ...u, balance: updatedBalance } : u));
     }
 
     setOrders(prev => [newOrder, ...prev]);
@@ -171,54 +153,24 @@ const App: React.FC = () => {
   };
 
   const handleSendTicket = (ticket: { name: string, email: string, message: string }) => {
-    const newTicket: SupportTicket = {
-      ...ticket,
-      id: Date.now().toString(),
-      date: new Date().toLocaleDateString(),
-      status: 'New'
-    };
+    const newTicket: SupportTicket = { ...ticket, id: Date.now().toString(), date: new Date().toLocaleDateString(), status: 'New' };
     setTickets(prev => [newTicket, ...prev]);
   };
 
   const handleSendMessage = (text: string) => {
     if (!currentUser) return;
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      senderEmail: currentUser.email,
-      senderName: currentUser.name,
-      text,
-      timestamp: new Date().toISOString(),
-      isAdmin: false
-    };
+    const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: currentUser.email, senderName: currentUser.name, text, timestamp: new Date().toISOString(), isAdmin: false };
     setMessages(prev => [...prev, newMessage]);
   };
 
   const handleAdminReply = (userEmail: string, text: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      senderEmail: 'admin@moonnight.shop',
-      senderName: 'Admin',
-      text: `[To: ${userEmail}] ${text}`,
-      timestamp: new Date().toISOString(),
-      isAdmin: true
-    };
+    const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: 'admin@moonnight.shop', senderName: 'Admin', text: `[To: ${userEmail}] ${text}`, timestamp: new Date().toISOString(), isAdmin: true };
     setMessages(prev => [...prev, newMessage]);
   };
 
-  // Admin Actions
-  const handleAddProduct = (p: Product) => setAllProducts(prev => [p, ...prev]);
-  const handleUpdateProduct = (p: Product) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i));
-  const handleDeleteProduct = (id: string) => setAllProducts(prev => prev.filter(i => i.id !== id));
-  const handleUpdateOrderStatus = (id: string, status: OrderStatus) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-  const handleUpdateTicketStatus = (id: string, status: TicketStatus) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t));
-  const handleDeleteTicket = (id: string) => setTickets(prev => prev.filter(t => t.id !== id));
-  const handleAddPromoCode = (promo: PromoCode) => setPromoCodes(prev => [promo, ...prev]);
-  const handleDeletePromoCode = (id: string) => setPromoCodes(prev => prev.filter(p => p.id !== id));
   const handleUpdateUserBalance = (email: string, balance: number) => {
     setAllUsers(prev => prev.map(u => u.email === email ? { ...u, balance } : u));
-    if (currentUser?.email === email) {
-      setCurrentUser(prev => prev ? { ...prev, balance } : null);
-    }
+    if (currentUser?.email === email) setCurrentUser(prev => prev ? { ...prev, balance } : null);
   };
 
   if (loading) {
@@ -231,86 +183,22 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-sky-500/30">
-      <Navbar 
-        cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
-        onOpenCart={() => setIsCartOpen(true)} 
-        activePage={activePage} 
-        setActivePage={setActivePage}
-        user={currentUser}
-      />
-
-      <CartSidebar 
-        isOpen={isCartOpen} 
-        onClose={() => setIsCartOpen(false)} 
-        items={cart} 
-        onRemove={handleRemoveFromCart} 
-        onUpdateQuantity={handleUpdateQuantity} 
-        onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }}
-      />
-
+      <Navbar cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} onOpenCart={() => setIsCartOpen(true)} activePage={activePage} setActivePage={setActivePage} user={currentUser} />
+      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} onRemove={handleRemoveFromCart} onUpdateQuantity={handleUpdateQuantity} onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }} />
       <main>
-        {activePage === 'home' && (
-          <Home 
-            onAddToCart={handleAddToCart} 
-            onViewDetails={(p) => setSelectedProduct(p)} 
-            onToggleWishlist={handleToggleWishlist} 
-            wishlist={wishlist} 
-            setActivePage={setActivePage}
-          />
-        )}
-        {activePage === 'shop' && (
-          <Shop 
-            products={allProducts} 
-            onAddToCart={handleAddToCart} 
-            onViewDetails={(p) => setSelectedProduct(p)} 
-            onToggleWishlist={handleToggleWishlist} 
-            wishlist={wishlist} 
-          />
-        )}
+        {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} />}
+        {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} />}
         {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} />}
-        {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} />}
-        {activePage === 'checkout' && (
-          <Checkout 
-            cart={cart} 
-            promoCodes={promoCodes} 
-            currentUser={currentUser} 
-            onComplete={handleCheckoutComplete} 
-            onCancel={() => setActivePage('shop')} 
-          />
-        )}
-        {activePage === 'account' && currentUser && (
-          <Account 
-            user={currentUser} 
-            orders={orders} 
-            messages={messages} 
-            onSendMessage={handleSendMessage} 
-            onLogout={handleLogout} 
-            onRefresh={() => {}}
-            isRefreshing={false}
-          />
-        )}
+        {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} allUsers={allUsers} />}
+        {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} />}
+        {activePage === 'account' && currentUser && <Account user={currentUser} orders={orders} messages={messages} onSendMessage={handleSendMessage} onLogout={handleLogout} onRefresh={() => {}} isRefreshing={false} />}
         {activePage === 'admin' && (
           <Admin 
-            products={allProducts} 
-            orders={orders} 
-            tickets={tickets} 
-            promoCodes={promoCodes} 
-            messages={messages} 
-            users={allUsers}
-            onUpdateUserBalance={handleUpdateUserBalance}
-            onAddProduct={handleAddProduct}
-            onUpdateProduct={handleUpdateProduct}
-            onDeleteProduct={handleDeleteProduct}
-            onUpdateOrderStatus={handleUpdateOrderStatus}
-            onUpdateTicketStatus={handleUpdateTicketStatus}
-            onDeleteTicket={handleDeleteTicket}
-            onAddPromoCode={handleAddPromoCode}
-            onDeletePromoCode={handleDeletePromoCode}
-            onAdminReply={handleAdminReply}
+            products={allProducts} orders={orders} tickets={tickets} promoCodes={promoCodes} messages={messages} users={allUsers}
+            onUpdateUserBalance={handleUpdateUserBalance} onAddProduct={(p) => setAllProducts(prev => [p, ...prev])} onUpdateProduct={(p) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i))} onDeleteProduct={(id) => setAllProducts(prev => prev.filter(i => i.id !== id))} onUpdateOrderStatus={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} onUpdateTicketStatus={(id, status) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))} onDeleteTicket={(id) => setTickets(prev => prev.filter(t => t.id !== id))} onAddPromoCode={(promo) => setPromoCodes(prev => [promo, ...prev])} onDeletePromoCode={(id) => setPromoCodes(prev => prev.filter(p => p.id !== id))} onAdminReply={handleAdminReply}
           />
         )}
       </main>
-
       <Footer onSecretEntrance={() => setActivePage('admin')} />
     </div>
   );
