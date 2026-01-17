@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 
@@ -55,15 +56,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
     };
 
     try {
-      const logUrl = process.env.LOG_SCRIPT_URL;
-      if (logUrl) {
-        await fetch(logUrl, {
-          method: 'POST',
-          mode: 'no-cors', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(() => console.warn('Logging skipped'));
-      }
+      const logUrl = "https://script.google.com/macros/s/AKfycby2gXGh8SwZ4TrekT02pLmOW9NSh4h8Z87mugRZoH2xwJ1gZ23sDOFfqcKpEoTfAVk/exec";
+      await fetch(logUrl, {
+        method: 'POST',
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
 
       if (mode === 'forgot') {
         setResetSent(true);
@@ -71,7 +70,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
         return;
       }
 
-      // Simulation delay for realistic feel
       const finalUser: User = existingUser || {
         id: Math.random().toString(36).substr(2, 9).toUpperCase(),
         name: formData.name || emailLower.split('@')[0],
@@ -89,7 +87,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
       }, 1000);
       
     } catch (err) {
-      console.error('Auth Error:', err);
       setError('Erreur technique. Veuillez réessayer.');
       setIsLoading(false);
     }
@@ -97,75 +94,75 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
 
   if (resetSent) {
     return (
-      <div className="pt-32 pb-24 max-w-md mx-auto px-4 animate-fade-in text-center">
-        <div className="bg-slate-900 border border-slate-800 p-10 rounded-[2.5rem] shadow-2xl">
-          <div className="w-16 h-16 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-sky-500/20">
-            <i className="fas fa-check text-sky-400"></i>
+      <div className="pt-48 pb-24 max-w-lg mx-auto px-6 animate-fade-in text-center">
+        <div className="bg-slate-900 border-4 border-slate-800 p-16 rounded-[4rem] shadow-2xl">
+          <div className="w-24 h-24 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-10 border-4 border-sky-500/30">
+            <i className="fas fa-check text-4xl text-sky-400"></i>
           </div>
-          <h2 className="text-xl font-gaming font-bold text-white uppercase tracking-widest mb-4">Lien Envoyé</h2>
-          <p className="text-slate-400 text-[10px] uppercase tracking-widest mb-8 leading-relaxed">Si l'adresse mail est valide, vous recevrez un lien de réinitialisation.</p>
-          <button onClick={() => { setResetSent(false); setMode('login'); }} className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl text-[10px] uppercase tracking-widest">Retour</button>
+          <h2 className="text-3xl font-gaming font-black text-white uppercase tracking-[0.2em] mb-6">UPLINK SENT</h2>
+          <p className="text-slate-400 text-sm uppercase tracking-widest mb-12 leading-relaxed font-bold">If the credentials match our database, an encryption key has been sent to your terminal.</p>
+          <button onClick={() => { setResetSent(false); setMode('login'); }} className="w-full bg-sky-500 text-white font-gaming py-6 rounded-[2rem] text-xs uppercase tracking-[0.3em] font-black shadow-xl">RE-INITIATE</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="pt-32 pb-24 max-w-2xl mx-auto px-4 animate-fade-in">
-      <div className="bg-slate-900 border border-slate-800 p-10 md:p-16 rounded-[4rem] shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/5 blur-[100px] -mr-32 -mt-32 rounded-full"></div>
+    <div className="pt-48 pb-24 max-w-3xl mx-auto px-6 animate-fade-in">
+      <div className="bg-slate-900 border-4 border-slate-800 p-12 md:p-24 rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 blur-[150px] -mr-48 -mt-48 rounded-full"></div>
         
-        <div className="text-center mb-16 relative z-10">
-          <h1 className="text-5xl md:text-7xl font-gaming font-black text-white uppercase tracking-tighter mb-4 leading-none">
+        <div className="text-center mb-20 relative z-10">
+          <h1 className="text-6xl md:text-8xl font-gaming font-black text-white uppercase tracking-tighter mb-6 leading-none">
             MoonNight <br />
-            <span className="text-sky-400 drop-shadow-[0_0_15px_rgba(14,165,233,0.3)]">Shop</span>
+            <span className="text-sky-400 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)]">Shop</span>
           </h1>
-          <p className="text-slate-500 text-[10px] font-gaming uppercase tracking-[0.8em] opacity-80">AUTHENTICATION GATEWAY</p>
+          <p className="text-slate-500 text-xs font-gaming uppercase tracking-[1em] opacity-80 font-black">SECURE AUTHENTICATION GATEWAY</p>
         </div>
 
-        <div className="flex bg-slate-950 p-2 rounded-[2.5rem] mb-12 border border-slate-800 relative z-10">
-          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-4 rounded-[2rem] text-[10px] font-gaming uppercase tracking-widest transition-all duration-300 ${mode === 'login' ? 'bg-sky-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Connexion</button>
-          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-4 rounded-[2rem] text-[10px] font-gaming uppercase tracking-widest transition-all duration-300 ${mode === 'signup' ? 'bg-sky-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>Inscription</button>
+        <div className="flex bg-slate-950 p-3 rounded-[3rem] mb-16 border-4 border-slate-800 relative z-10 shadow-inner">
+          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-5 rounded-[2.5rem] text-xs font-gaming uppercase tracking-[0.3em] font-black transition-all duration-500 ${mode === 'login' ? 'bg-sky-500 text-white shadow-2xl' : 'text-slate-500 hover:text-white'}`}>LOG-IN</button>
+          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-5 rounded-[2.5rem] text-xs font-gaming uppercase tracking-[0.3em] font-black transition-all duration-500 ${mode === 'signup' ? 'bg-sky-500 text-white shadow-2xl' : 'text-slate-500 hover:text-white'}`}>SIGN-UP</button>
         </div>
 
         {error && (
-          <div className="mb-8 p-6 bg-red-500/10 border border-red-500/20 rounded-3xl animate-scale-up text-center">
-            <p className="text-red-500 text-[10px] font-gaming uppercase tracking-widest">{error}</p>
+          <div className="mb-10 p-8 bg-red-500/10 border-4 border-red-500/30 rounded-[3rem] animate-scale-up text-center">
+            <p className="text-red-500 text-xs font-gaming uppercase tracking-widest font-black leading-relaxed">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-10 relative z-10">
           {mode === 'signup' && (
             <div className="animate-slide-up">
-              <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4 tracking-widest">Username</label>
-              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all text-sm" placeholder="Votre avatar name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">PILOT NAME</label>
+              <input required type="text" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="YOUR AVATAR NAME" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
           )}
           
           <div className="animate-slide-up">
-            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4 tracking-widest">Email Address</label>
-            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all text-sm" placeholder="votre@email.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">COMM CHANNEL (EMAIL)</label>
+            <input required type="email" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="PILOT@BASE.COM" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
 
           <div className="animate-slide-up">
-            <label className="block text-slate-500 text-[10px] font-gaming uppercase mb-2 ml-4 tracking-widest">Secret Key (Password)</label>
-            <input required type="password" minLength={6} className="w-full bg-slate-950 border border-slate-800 rounded-[2rem] px-8 py-5 text-white focus:outline-none focus:border-sky-500 transition-all text-sm" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+            <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">ENCRYPTION KEY (PASSWORD)</label>
+            <input required type="password" minLength={6} className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
           </div>
 
           {mode === 'login' && (
-            <div className="text-right pr-4">
-              <button type="button" onClick={() => setMode('forgot')} className="text-[10px] font-gaming uppercase tracking-widest text-slate-500 hover:text-sky-400 transition-colors">Mot de passe oublié ?</button>
+            <div className="text-right pr-8">
+              <button type="button" onClick={() => setMode('forgot')} className="text-xs font-gaming uppercase tracking-[0.2em] text-slate-500 hover:text-sky-400 transition-colors font-bold">FORGOT KEY?</button>
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming font-bold py-6 rounded-[2rem] shadow-xl hover:bg-sky-600 transition-all uppercase tracking-[0.3em] mt-8 text-xs disabled:opacity-50 active:scale-95">
-            {isLoading ? 'Processing...' : (mode === 'login' ? 'Accéder au Portail' : 'Rejoindre la Base')}
+          <button type="submit" disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming font-black py-8 rounded-[2.5rem] shadow-2xl hover:bg-sky-600 transition-all uppercase tracking-[0.4em] mt-12 text-base disabled:opacity-50 active:scale-95">
+            {isLoading ? 'SYNCING...' : (mode === 'login' ? 'ACCESS PORTAL' : 'REJOIN THE BASE')}
           </button>
         </form>
 
-        <div className="mt-12 text-center relative z-10">
-          <button onClick={onBack} className="text-slate-500 hover:text-sky-400 text-[10px] font-gaming uppercase tracking-widest transition-colors">
-            ← Revenir à la boutique
+        <div className="mt-16 text-center relative z-10">
+          <button onClick={onBack} className="text-slate-500 hover:text-sky-400 text-xs font-gaming uppercase tracking-[0.3em] transition-colors font-black">
+            ← RETURN TO MARKETPLACE
           </button>
         </div>
       </div>

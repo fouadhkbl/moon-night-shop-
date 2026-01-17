@@ -15,7 +15,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
 
   const navLinks = [
     { id: 'home', label: 'Home' },
-    { id: 'shop', label: 'Shop' },
+    { id: 'shop', label: 'Market' },
     { id: 'contact', label: 'Support' },
   ];
 
@@ -27,37 +27,34 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
   const handleSupportClick = () => {
     if (user) {
       setActivePage('account');
-      // Note: Account tab switching would need to be handled, 
-      // but standard behavior is to go to the chat tab if linked.
     } else {
       setActivePage('contact');
     }
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-sky-500/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-sky-500/30 h-28">
+      <div className="max-w-[1440px] mx-auto px-8 h-full">
+        <div className="flex items-center justify-between h-full">
           <div 
-            className="flex items-center space-x-3 cursor-pointer group"
+            className="flex items-center space-x-5 cursor-pointer group"
             onClick={() => handlePageChange('home')}
           >
-            <div className="relative w-12 h-12 flex-shrink-0 bg-gradient-to-br from-sky-500 to-purple-600 rounded-xl shadow-lg shadow-sky-500/20 flex items-center justify-center transform group-hover:rotate-12 transition-all duration-300">
-              <span className="text-white font-gaming font-bold text-2xl">M</span>
-              <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-white rounded-full animate-pulse shadow-sm"></div>
+            <div className="relative w-16 h-16 flex-shrink-0 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-2xl shadow-sky-500/20 flex items-center justify-center transform group-hover:scale-110 transition-all duration-500">
+              <span className="text-white font-gaming font-black text-4xl">M</span>
             </div>
-            <span className="text-white font-gaming text-xl sm:text-2xl font-bold tracking-tight">
+            <span className="text-white font-gaming text-3xl lg:text-4xl font-black tracking-tight">
               MoonNight <span className="text-sky-400">Shop</span>
             </span>
           </div>
 
-          <div className="hidden md:flex items-center space-x-10">
+          <div className="hidden lg:flex items-center space-x-16">
             {navLinks.map((link) => (
               <button
                 key={link.id}
                 onClick={() => handlePageChange(link.id)}
-                className={`text-base font-gaming uppercase tracking-widest transition-all hover:scale-110 ${
-                  activePage === link.id ? 'text-sky-400 neon-text-blue scale-110' : 'text-slate-300 hover:text-white'
+                className={`text-xl font-gaming uppercase tracking-[0.25em] font-black transition-all hover:scale-110 ${
+                  activePage === link.id ? 'text-sky-400 neon-text-blue' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {link.label}
@@ -65,65 +62,77 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
             ))}
           </div>
 
-          <div className="flex items-center space-x-3 sm:space-x-6">
+          <div className="flex items-center space-x-8 lg:space-x-10">
             {/* Chat Icon - New Support Link */}
             <button 
               onClick={handleSupportClick}
-              className="p-2.5 text-slate-300 hover:text-sky-400 transition-all hover:scale-110 relative"
+              className="group relative p-4 text-slate-400 hover:text-sky-400 transition-all transform hover:scale-125"
               title="Contact Seller"
             >
-              <i className="fas fa-comment-dots text-xl sm:text-2xl"></i>
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-sky-500 rounded-full animate-ping"></span>
+              <i className="fas fa-comments text-3xl lg:text-4xl"></i>
+              <span className="absolute top-2 right-2 w-4 h-4 bg-sky-500 rounded-full border-2 border-slate-950 notification-dot"></span>
             </button>
 
+            {/* Shopping Cart */}
             <button 
               onClick={onOpenCart}
-              className="relative p-2.5 text-slate-300 hover:text-sky-400 transition-all hover:scale-110"
+              className="group relative p-4 text-slate-400 hover:text-sky-400 transition-all transform hover:scale-125"
             >
-              <i className="fas fa-shopping-cart text-xl sm:text-2xl"></i>
+              <i className="fas fa-shopping-bag text-3xl lg:text-4xl"></i>
               {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-sky-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ring-2 ring-slate-900">
+                <span className="absolute top-1 right-1 bg-sky-500 text-white text-[14px] font-black w-8 h-8 flex items-center justify-center rounded-full ring-4 ring-slate-900 shadow-xl">
                   {cartCount}
                 </span>
               )}
             </button>
 
+            {/* User Profile */}
             <button 
               onClick={() => handlePageChange(user ? 'account' : 'auth')}
-              className={`p-2 transition-all flex items-center space-x-2 border rounded-full px-4 py-2 hover:bg-slate-800/50 ${user ? 'text-sky-400 border-sky-500/30' : 'text-slate-300 border-slate-700 hover:text-sky-400'}`}
+              className={`flex items-center space-x-4 px-6 py-4 rounded-2xl border-2 transition-all group ${
+                user 
+                  ? 'text-sky-400 border-sky-500/30 bg-sky-500/5 hover:bg-sky-500/10' 
+                  : 'text-slate-400 border-slate-800 hover:border-sky-500/50 hover:text-sky-400'
+              }`}
             >
-              <i className="fas fa-user text-lg"></i>
+              <i className="fas fa-user-circle text-3xl"></i>
               {user && (
-                <span className="hidden lg:inline text-xs font-gaming uppercase tracking-widest truncate max-w-[100px]">
-                  {user.name.split(' ')[0]}
+                <span className="hidden xl:inline text-base font-gaming font-black uppercase tracking-widest max-w-[150px] truncate">
+                  {user.name}
                 </span>
               )}
             </button>
 
             <button 
-              className="md:hidden p-2 text-slate-300"
+              className="lg:hidden p-4 text-slate-400 hover:text-white"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
-              <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars'} text-2xl`}></i>
+              <i className={`fas ${isMenuOpen ? 'fa-times' : 'fa-bars-staggered'} text-4xl`}></i>
             </button>
           </div>
         </div>
       </div>
 
       {isMenuOpen && (
-        <div className="md:hidden glass border-t border-sky-500/20 py-10 animate-fade-in shadow-2xl">
-          <div className="flex flex-col space-y-10 px-8">
+        <div className="lg:hidden glass border-t border-sky-500/20 py-20 animate-fade-in shadow-2xl h-screen">
+          <div className="flex flex-col space-y-16 px-12 text-center">
             {navLinks.map((link) => (
               <button
                 key={link.id}
                 onClick={() => handlePageChange(link.id)}
-                className={`text-left text-lg font-gaming uppercase tracking-[0.2em] py-2 ${
-                  activePage === link.id ? 'text-sky-400' : 'text-slate-300'
+                className={`text-3xl font-gaming uppercase tracking-[0.3em] font-black ${
+                  activePage === link.id ? 'text-sky-400' : 'text-slate-400'
                 }`}
               >
                 {link.label}
               </button>
             ))}
+            <button 
+              onClick={handleSupportClick}
+              className="text-3xl font-gaming uppercase tracking-[0.3em] font-black text-sky-400"
+            >
+              Contact Seller
+            </button>
           </div>
         </div>
       )}
