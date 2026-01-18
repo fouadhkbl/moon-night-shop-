@@ -118,7 +118,7 @@ const Admin: React.FC<AdminProps> = ({
 
   const scrollTabs = (direction: 'left' | 'right') => {
     if (tabsRef.current) {
-      const amount = 150;
+      const amount = 200;
       tabsRef.current.scrollBy({
         left: direction === 'left' ? -amount : amount,
         behavior: 'smooth'
@@ -184,48 +184,48 @@ const Admin: React.FC<AdminProps> = ({
     <div className="pt-24 sm:pt-36 pb-24 max-w-7xl mx-auto px-4 sm:px-8 animate-fade-in">
       
       {/* Scrollable Tabs Wrapper */}
-      <div className="relative group/tabs mb-8">
+      <div className="relative group/tabs mb-8 overflow-hidden rounded-2xl bg-slate-950/30 border border-slate-800/50 p-2">
         {/* Mobile Left Arrow */}
         <button 
           onClick={() => scrollTabs('left')}
-          className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-slate-900/80 border border-slate-700 rounded-full flex items-center justify-center text-sky-500 shadow-lg backdrop-blur-sm active:scale-90 transition-transform"
+          className="lg:hidden absolute left-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-slate-900/90 border border-sky-500/30 rounded-full flex items-center justify-center text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)] backdrop-blur-md active:scale-90 transition-all"
         >
-          <i className="fas fa-chevron-left text-[10px]"></i>
+          <i className="fas fa-chevron-left text-[12px]"></i>
         </button>
 
         {/* Mobile Right Arrow */}
         <button 
           onClick={() => scrollTabs('right')}
-          className="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 bg-slate-900/80 border border-slate-700 rounded-full flex items-center justify-center text-sky-500 shadow-lg backdrop-blur-sm active:scale-90 transition-transform"
+          className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-slate-900/90 border border-sky-500/30 rounded-full flex items-center justify-center text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.2)] backdrop-blur-md active:scale-90 transition-all"
         >
-          <i className="fas fa-chevron-right text-[10px]"></i>
+          <i className="fas fa-chevron-right text-[12px]"></i>
         </button>
 
         {/* Tabs Container */}
         <div 
           ref={tabsRef}
-          className="flex overflow-x-auto gap-2 no-scrollbar pb-2 flex-nowrap items-center w-full px-8 lg:px-0"
+          className="flex overflow-x-auto gap-2 no-scrollbar pb-1 flex-nowrap items-center w-full px-12 lg:px-0 snap-x snap-mandatory"
           style={{ scrollBehavior: 'smooth' }}
         >
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-shrink-0 px-6 py-3 rounded-xl font-gaming text-[10px] uppercase font-black transition-all border whitespace-nowrap ${
+              className={`flex-shrink-0 px-8 py-4 rounded-xl font-gaming text-[11px] uppercase font-black transition-all border whitespace-nowrap snap-center ${
                 activeTab === tab.id 
-                  ? 'bg-sky-500 text-white border-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.3)]' 
-                  : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600'
+                  ? 'bg-sky-500 text-white border-sky-400 shadow-[0_0_20px_rgba(14,165,233,0.4)] scale-[1.02]' 
+                  : 'bg-slate-900 text-slate-500 border-slate-800 hover:border-slate-600 hover:text-slate-300'
               }`}
             >
-              <i className={`fas fa-${tab.icon} mr-2`}></i>
+              <i className={`fas fa-${tab.icon} mr-3 text-[14px]`}></i>
               {tab.label}
             </button>
           ))}
         </div>
         
         {/* Visual Fade Indicators */}
-        <div className="lg:hidden pointer-events-none absolute left-8 top-0 bottom-2 w-12 bg-gradient-to-r from-slate-950/40 to-transparent z-10" />
-        <div className="lg:hidden pointer-events-none absolute right-8 top-0 bottom-2 w-12 bg-gradient-to-l from-slate-950/40 to-transparent z-10" />
+        <div className="lg:hidden pointer-events-none absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-slate-950 to-transparent z-20" />
+        <div className="lg:hidden pointer-events-none absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-slate-950 to-transparent z-20" />
       </div>
 
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl min-h-[600px] relative">
@@ -509,7 +509,7 @@ const Admin: React.FC<AdminProps> = ({
                   <input 
                     type="number"
                     placeholder="DISCOUNT %" 
-                    className="w-full sm:w-32 bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-white font-gaming text-xs focus:border-sky-500 outline-none"
+                    className="w-full sm:w-32 bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-white font-gaming text-xs focus:border-sky-500 outline-none"
                     value={couponDiscount || ''}
                     onChange={e => setCouponDiscount(parseInt(e.target.value))}
                   />

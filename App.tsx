@@ -61,7 +61,6 @@ const App: React.FC = () => {
 
         const sheetUsers = await sheetUsersPromise;
         if (sheetUsers && Array.isArray(sheetUsers) && sheetUsers.length > 0) {
-          // Task 1 Mapping: Column A: first name | Column B: password | Column C: email | Column g: date and time
           const mapped = sheetUsers.map((u: any, idx: number) => ({
             id: u['email'] || u['gmail'] || `u-${idx}`,
             name: u['first name'] || u['name'] || 'User',
@@ -157,8 +156,9 @@ const App: React.FC = () => {
   };
 
   const handleCheckoutComplete = (data: any) => {
+    const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
     const newOrder: Order = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      id: orderId,
       firstName: data.firstName || 'Client',
       lastName: data.lastName || 'MoonNight',
       email: data.email || (currentUser?.email || ''),
@@ -166,15 +166,28 @@ const App: React.FC = () => {
       productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
       totalAmount: data.total,
       date: new Date().toLocaleDateString(),
-      status: data.isInstant ? 'Completed' : 'Pending',
+      status: 'Payment Verifying', // Always start with Payment Verifying as requested
       paymentMethod: data.paymentMethod
     };
 
-    if (data.isInstant && data.paymentMethod === 'solde' && currentUser) {
+    if (data.paymentMethod === 'solde' && currentUser) {
       const updatedBalance = Math.max(0, currentUser.balance - data.total);
       const updatedUser = { ...currentUser, balance: updatedBalance };
       setCurrentUser(updatedUser);
       setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === currentUser.email?.toLowerCase() ? updatedUser : u));
+    }
+
+    // Add System notification message to user chat
+    if (currentUser) {
+      const systemMsg: ChatMessage = {
+        id: Date.now().toString() + '-sys',
+        senderEmail: 'system@moonnight.shop',
+        senderName: 'SYSTEM',
+        text: `[To: ${currentUser.email}] Order #${orderId} is under verification. Please wait for processing.`,
+        timestamp: new Date().toISOString(),
+        isAdmin: true
+      };
+      setMessages(prev => [...prev, systemMsg]);
     }
 
     setOrders(prev => [newOrder, ...prev]);

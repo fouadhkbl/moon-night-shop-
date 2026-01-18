@@ -37,7 +37,7 @@ const Footer: React.FC<FooterProps> = ({ onSecretEntrance, t }) => {
               </span>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Marketplace premium pour actifs de gaming digitaux. Sécurisé, rapide et fiable depuis 2021.
+              Marketplace premium pour actifs de gaming digitaux. Sécurisé, rapide et fiable depuis 2026.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-sky-400 hover:border-sky-400 transition-all">

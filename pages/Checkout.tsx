@@ -99,6 +99,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
     if (isExternalPayment && !isExternalSuccess) return;
     
     setIsSubmitting(true);
+    // Even if isInstant is true for the UI flow, App.tsx now overrides initial status to 'Payment Verifying'
     const isInstant = paymentMethod === 'solde' || isExternalPayment;
     
     onComplete({ 
@@ -252,11 +253,11 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
       {isSuccess && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-8 bg-slate-950/95 backdrop-blur-md">
           <div className="text-center space-y-8 animate-scale-up">
-            <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
+            <div className="w-24 h-24 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
               <i className="fas fa-check text-5xl text-green-500"></i>
             </div>
-            <h2 className="text-3xl font-gaming font-black text-white uppercase tracking-tighter">Transmission Secured</h2>
-            <p className="text-slate-400 font-mono text-sm max-w-xs mx-auto">Assets are being deployed to your registry. Processing confirmed.</p>
+            <h2 className="text-3xl font-gaming font-black text-white uppercase tracking-tighter">Verification Initiated</h2>
+            <p className="text-slate-400 font-mono text-sm max-w-xs mx-auto">Order is under verification protocol. Assets will be released upon clearance.</p>
             <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         </div>
@@ -478,7 +479,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
                       }}
                       className="w-full sm:flex-[2] bg-cyan-500 text-slate-950 font-gaming py-5 sm:py-8 rounded-2xl sm:rounded-[3rem] uppercase tracking-[0.3em] text-[10px] sm:text-base font-black shadow-[0_0_50px_rgba(0,255,255,0.4)] hover:bg-cyan-400 transition-all active:scale-95 disabled:opacity-20"
                     >
-                      {isSubmitting ? 'ENCRYPTING...' : (paymentMethod === 'solde' ? `EXECUTE UPLINK` : 'ESTABLISH LINK')}
+                      {isSubmitting ? 'ENCRYPTING...' : 'INITIALIZE VERIFICATION'}
                     </button>
                   </div>
                 )}
