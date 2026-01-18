@@ -115,16 +115,16 @@
         background: radial-gradient(circle at center, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
       }
 
-      /* Snow Canvas Styling */
+      /* Snow Canvas Styling - Changed to overlay layer */
       #snow-canvas {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: -1;
+        z-index: 50; /* Above background/content, below nav/modals */
         pointer-events: none;
-        opacity: 0.6;
+        opacity: 0.5;
       }
     </style>
   <script type="importmap">
@@ -159,10 +159,10 @@
             particles.push({
               x: Math.random() * width,
               y: Math.random() * height,
-              r: Math.random() * 2.5 + 0.5, // Particle size
+              r: Math.random() * 2.0 + 0.5, // Particle size
               d: Math.random() * 1, // Density/drifting
               s: Math.random() * 0.8 + 0.2, // Falling speed
-              o: Math.random() * 0.5 + 0.1  // Individual opacity
+              o: Math.random() * 0.4 + 0.1  // Individual opacity
             });
           }
         }
@@ -177,9 +177,9 @@
             ctx.fill();
             
             // Add a very subtle glow to larger particles
-            if (p.r > 2) {
-              ctx.shadowBlur = 10;
-              ctx.shadowColor = "rgba(0, 255, 255, 0.4)";
+            if (p.r > 1.5) {
+              ctx.shadowBlur = 8;
+              ctx.shadowColor = "rgba(0, 255, 255, 0.3)";
             } else {
               ctx.shadowBlur = 0;
             }
@@ -191,7 +191,7 @@
           for (let p of particles) {
             p.y += p.s;
             // Add subtle horizontal swaying
-            p.x += Math.sin(p.y / 60) * 0.3;
+            p.x += Math.sin(p.y / 80) * 0.4;
             
             // Loop particles back to the top
             if (p.y > height) {

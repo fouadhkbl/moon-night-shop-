@@ -166,7 +166,7 @@ const App: React.FC = () => {
       productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
       totalAmount: data.total,
       date: new Date().toLocaleDateString(),
-      status: 'Payment Verifying', // Always start with Payment Verifying as requested
+      status: 'Payment Verifying', 
       paymentMethod: data.paymentMethod
     };
 
@@ -177,7 +177,6 @@ const App: React.FC = () => {
       setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === currentUser.email?.toLowerCase() ? updatedUser : u));
     }
 
-    // Add System notification message to user chat
     if (currentUser) {
       const systemMsg: ChatMessage = {
         id: Date.now().toString() + '-sys',
@@ -230,7 +229,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-sky-500/30">
+    <div className="min-h-screen bg-transparent text-slate-200 selection:bg-sky-500/30">
       <Navbar 
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)} 
