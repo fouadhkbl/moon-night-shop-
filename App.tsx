@@ -10,11 +10,11 @@ import Admin from './pages/Admin';
 import Checkout from './pages/Checkout';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
-import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage, Language, ActivityLog } from './types';
+import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage, Language } from './types';
 import { PRODUCTS } from './constants';
 import { translations, TranslationKeys } from './translations';
 
-// NEW CENTRALIZED DATABASE URL
+// CENTRALIZED DATABASE URL
 const SHEET_URL = "https://script.google.com/macros/s/AKfycWxOa9N5Tr5CBNTi0J4159jVTSmRfM58nKOZIfM_fITjhPAIDwGhR9kFUX468tH_l2/exec";
 
 const App: React.FC = () => {
@@ -26,7 +26,7 @@ const App: React.FC = () => {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // SHARED BUSINESS STATE (Now exclusively Cloud-fetched)
+  // CLOUD-SYNCHRONIZED STATE
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -44,7 +44,7 @@ const App: React.FC = () => {
 
   const t = (key: TranslationKeys) => translations[language][key] || key;
 
-  // Task: IP Tracking
+  // Task: IP Tracking for every entry
   const getIpAddress = async () => {
     try {
       const response = await fetch('https://api64.ipify.org?format=json');
@@ -55,19 +55,18 @@ const App: React.FC = () => {
     }
   };
 
-  // Task: Auto-Sync with strict 15-column mapping
-  const syncToCloud = async (dataType: 'LOGIN' | 'ORDER' | 'TICKET' | 'COUPON' | 'PRODUCT' | 'USER_REGISTRY' | 'BALANCE_UPDATE' | 'MESSAGE', data: any) => {
+  // Task: Strict 15-column Cloud Sync
+  const syncToCloud = async (dataType: string, data: any) => {
     const ip = await getIpAddress();
     
-    // Map application data to the 15 exact sheet columns
     const payload = {
       "first name": data.firstName || data.name || (dataType === 'LOGIN' ? data.name : ""),
       "last name": data.lastName || "",
-      "email": data.email || data.targetEmail || "",
+      "email": (data.email || data.targetEmail || "").toLowerCase(),
       "payment methode": data.paymentMethod || "",
       "product bought": data.productBought || "",
       "total amount": data.totalAmount || data.price || 0,
-      "date and time": new Date().toISOString(),
+      "date and time": new Date().toLocaleString(),
       "password": data.password || "",
       "product": (dataType === 'PRODUCT') ? JSON.stringify(data) : "",
       "ipAddress": ip,
@@ -86,11 +85,11 @@ const App: React.FC = () => {
         body: JSON.stringify(payload)
       });
     } catch (e) {
-      console.error("Sync Protocol Failure", e);
+      console.error("Cloud Transmission Failure", e);
     }
   };
 
-  // Task: Global Fetch Logic (Automatically runs on mount)
+  // Task: Global Fetch Logic with Filter by dataType and "Last Entry Wins" reduction
   const fetchGlobalData = async () => {
     try {
       setLoading(true);
@@ -104,80 +103,100 @@ const App: React.FC = () => {
         const ticketsMap = new Map();
         const promosMap = new Map();
         const msgList: ChatMessage[] = [];
-        const logList: any[] = [];
+        const loginHistory: any[] = [];
 
+        // Process data in chronological order (sheet top-to-bottom)
         sheetData.forEach((row: any) => {
-          const dt = row.dataType || row.type;
+          const dt = row.dataType;
+          const email = (row.email || "").toLowerCase();
           
-          // Helper to parse nested JSON fields
-          const parseField = (field: string) => {
-            try { return field && field.startsWith('{') ? JSON.parse(field) : null; } catch(e) { return null; }
+          const parseJSON = (str: string) => {
+            try { return str && str.startsWith('{') ? JSON.parse(str) : null; } catch(e) { return null; }
           };
 
           if (dt === 'LOGIN') {
-            logList.push({
-              email: row.email,
+            loginHistory.push({
+              email: email,
               password: row.password,
               ip: row.ipAddress,
               timestamp: row["date and time"]
             });
-          } else if (dt === 'USER_REGISTRY' || dt === 'LOGIN') {
-            usersMap.set(row.email.toLowerCase(), {
-              id: row.email,
-              name: row["first name"] || row.email.split('@')[0],
-              email: row.email,
-              password: row.password,
-              state: 'ACTIVE',
-              joinedAt: row["date and time"],
-              balance: 0
+            // Also treat LOGIN as a user registration trigger if they don't exist
+            if (!usersMap.has(email)) {
+              usersMap.set(email, {
+                id: email, name: row["first name"] || email.split('@')[0], email: email,
+                password: row.password, state: 'ACTIVE', joinedAt: row["date and time"], balance: 0
+              });
+            }
+          } 
+          
+          if (dt === 'USER_REGISTRY') {
+            usersMap.set(email, {
+              id: email, name: row["first name"], email: email,
+              password: row.password, state: 'ACTIVE', joinedAt: row["date and time"], balance: 0
             });
-          } else if (dt === 'BALANCE_UPDATE') {
-            const u = usersMap.get(row.email.toLowerCase());
-            if (u) u.balance = parseFloat(row["total amount"]) || 0;
-          } else if (dt === 'ORDER') {
-            const orderData = {
+          }
+
+          if (dt === 'BALANCE_UPDATE') {
+            const user = usersMap.get(email);
+            if (user) {
+              user.balance = parseFloat(row["total amount"]) || 0;
+            }
+          }
+
+          if (dt === 'ORDER') {
+            ordersMap.set(row.order, {
               id: row.order,
               firstName: row["first name"],
               lastName: row["last name"],
-              email: row.email,
+              email: email,
               productBought: row["product bought"],
               totalAmount: parseFloat(row["total amount"]),
               date: row["date and time"],
               status: row.statu,
               paymentMethod: row["payment methode"]
-            };
-            ordersMap.set(row.order, orderData);
-          } else if (dt === 'PRODUCT') {
-            const p = parseField(row.product);
+            });
+          }
+
+          if (dt === 'PRODUCT') {
+            const p = parseJSON(row.product);
             if (p) prodMap.set(p.id, p);
-          } else if (dt === 'TICKET') {
-            const t = parseField(row.ticket);
+          }
+
+          if (dt === 'TICKET') {
+            const t = parseJSON(row.ticket);
             if (t) {
-              t.status = row.statu || t.status; // Overlay with latest status from row
+              t.status = row.statu || t.status;
               ticketsMap.set(t.id, t);
             }
-          } else if (dt === 'COUPON') {
-            const c = parseField(row.coupon);
+          }
+
+          if (dt === 'COUPON') {
+            const c = parseJSON(row.coupon);
             if (c) promosMap.set(c.id, c);
-          } else if (dt === 'MESSAGE') {
-            msgList.push(parseField(row.details) || { 
-              senderEmail: row.email, 
-              text: row["product bought"], 
-              timestamp: row["date and time"] 
-            });
+          }
+
+          if (dt === 'MESSAGE') {
+            msgList.push({
+              id: row["date and time"],
+              senderEmail: email,
+              text: row["product bought"],
+              timestamp: row["date and time"],
+              isAdmin: row["first name"] === "Admin"
+            } as ChatMessage);
           }
         });
 
         setAllUsers(Array.from(usersMap.values()));
         setAllProducts(prodMap.size > 0 ? Array.from(prodMap.values()) : PRODUCTS);
-        setOrders(Array.from(ordersMap.values()).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        setOrders(Array.from(ordersMap.values()).reverse()); // Newest first
         setTickets(Array.from(ticketsMap.values()));
         setPromoCodes(Array.from(promosMap.values()));
         setMessages(msgList);
-        setLoginLogs(logList.reverse());
+        setLoginLogs(loginHistory.reverse());
       }
     } catch (e) {
-      console.error("Global Telemetry Fetch Failed", e);
+      console.error("Cloud Database unreachable", e);
       setAllProducts(PRODUCTS);
     } finally {
       setLoading(false);
@@ -186,20 +205,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchGlobalData();
+    // Load local user session only
+    const storedUser = localStorage.getItem('mn_user');
+    if (storedUser) setCurrentUser(JSON.parse(storedUser));
   }, []);
-
-  // Save only local session/preferences to localStorage
-  const saveLocalConfig = useCallback(() => {
-    const s = stateRef.current;
-    localStorage.setItem('mn_cart', JSON.stringify(s.cart));
-    localStorage.setItem('mn_wishlist', JSON.stringify(s.wishlist));
-    localStorage.setItem('mn_lang', s.language);
-    if (s.currentUser) localStorage.setItem('mn_user', JSON.stringify(s.currentUser));
-  }, []);
-
-  useEffect(() => {
-    saveLocalConfig();
-  }, [cart, wishlist, currentUser, language, saveLocalConfig]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
@@ -214,6 +223,7 @@ const App: React.FC = () => {
     setCurrentUser(user);
     syncToCloud('LOGIN', user);
     setActivePage('home');
+    localStorage.setItem('mn_user', JSON.stringify(user));
   };
 
   const handleLogout = () => {
@@ -222,47 +232,15 @@ const App: React.FC = () => {
     localStorage.removeItem('mn_user');
   };
 
-  const handleCheckoutComplete = (data: any) => {
-    const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
-    const newOrder: Order = {
-      id: orderId,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      country: data.country,
-      productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
-      totalAmount: data.total,
-      date: new Date().toLocaleDateString(),
-      status: 'Payment Verifying', 
-      paymentMethod: data.paymentMethod
-    };
-
-    if (data.paymentMethod === 'solde' && currentUser) {
-      const updatedBalance = Math.max(0, currentUser.balance - data.total);
-      handleUpdateUserBalance(currentUser.email, updatedBalance);
-    }
-
-    setOrders(prev => [newOrder, ...prev]);
-    syncToCloud('ORDER', newOrder);
-    setCart([]);
-    setActivePage('account');
-  };
-
   const handleUpdateUserBalance = (email: string, balance: number) => {
     const emailLower = email.toLowerCase();
-    setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === emailLower ? { ...u, balance } : u));
-    if (currentUser?.email?.toLowerCase() === emailLower) setCurrentUser(prev => prev ? { ...prev, balance } : null);
-    syncToCloud('BALANCE_UPDATE', { email, totalAmount: balance });
-  };
-
-  const handleAddProduct = (p: Product) => {
-    setAllProducts(prev => [p, ...prev]);
-    syncToCloud('PRODUCT', p);
-  };
-
-  const handleAddPromoCode = (promo: PromoCode) => {
-    setPromoCodes(prev => [promo, ...prev]);
-    syncToCloud('COUPON', promo);
+    setAllUsers(prev => prev.map(u => u.email.toLowerCase() === emailLower ? { ...u, balance } : u));
+    if (currentUser?.email.toLowerCase() === emailLower) {
+      const updated = { ...currentUser, balance };
+      setCurrentUser(updated);
+      localStorage.setItem('mn_user', JSON.stringify(updated));
+    }
+    syncToCloud('BALANCE_UPDATE', { email: emailLower, totalAmount: balance });
   };
 
   const handleUpdateOrderStatus = (id: string, status: OrderStatus) => {
@@ -274,19 +252,24 @@ const App: React.FC = () => {
     });
   };
 
+  const handleAddPromoCode = (promo: PromoCode) => {
+    setPromoCodes(prev => [promo, ...prev]);
+    syncToCloud('COUPON', promo);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
-           <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-           <p className="font-gaming text-sky-400 text-[10px] animate-pulse tracking-[0.4em] uppercase">Global Database Syncing...</p>
+           <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-gaming text-cyan-400 text-[10px] animate-pulse tracking-[0.4em] uppercase">Cloud Terminal Synchronizing...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-200 selection:bg-sky-500/30">
+    <div className="min-h-screen bg-transparent text-slate-200 selection:bg-cyan-500/30">
       <Navbar 
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)} 
@@ -317,18 +300,18 @@ const App: React.FC = () => {
               <div className="md:w-1/2 p-4 sm:p-8">
                 <div className="aspect-square rounded-3xl overflow-hidden border border-slate-800 shadow-2xl relative">
                   <img src={selectedProduct.image} className="w-full h-full object-cover" />
-                  <div className="absolute top-4 left-4 px-4 py-1.5 bg-sky-500 rounded-full text-[10px] font-gaming uppercase tracking-widest text-white">{selectedProduct.category}</div>
+                  <div className="absolute top-4 left-4 px-4 py-1.5 bg-cyan-500 rounded-full text-[10px] font-gaming uppercase tracking-widest text-white">{selectedProduct.category}</div>
                 </div>
               </div>
               <div className="md:w-1/2 p-8 pt-4 md:p-12 md:pl-0 flex flex-col justify-center">
                 <h2 className="text-3xl font-gaming font-bold text-white mb-4 leading-tight">{selectedProduct.name}</h2>
                 <div className="flex items-center space-x-4 mb-6">
-                  <div className="text-3xl font-gaming font-bold text-sky-400">{selectedProduct.price.toFixed(2)} DH</div>
+                  <div className="text-3xl font-gaming font-bold text-cyan-400">{selectedProduct.price.toFixed(2)} DH</div>
                   {selectedProduct.originalPrice && <div className="text-slate-500 line-through text-lg">{selectedProduct.originalPrice.toFixed(2)} DH</div>}
                 </div>
                 <p className="text-slate-400 text-sm leading-relaxed mb-8">{selectedProduct.description}</p>
                 <div className="flex space-x-4">
-                  <button onClick={() => { handleAddToCart(selectedProduct!); setSelectedProduct(null); }} className="flex-1 bg-sky-500 text-white font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-sky-500/20 hover:bg-sky-600 transition-all active:scale-[0.98]">
+                  <button onClick={() => { handleAddToCart(selectedProduct!); setSelectedProduct(null); }} className="flex-1 bg-cyan-500 text-slate-950 font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-cyan-500/20 hover:bg-cyan-400 transition-all active:scale-[0.98]">
                     {t('buyNow')}
                   </button>
                 </div>
@@ -341,24 +324,46 @@ const App: React.FC = () => {
       <main className="pb-20 lg:pb-0">
         {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={setSelectedProduct} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
         {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={setSelectedProduct} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} t={t} />}
-        {activePage === 'contact' && <Contact onSendTicket={(tk) => { setTickets(p => [...p, {...tk, id: Date.now().toString(), status: 'New', date: new Date().toLocaleDateString()}]); syncToCloud('TICKET', tk); }} t={t} />}
+        {activePage === 'contact' && <Contact onSendTicket={(tk) => { syncToCloud('TICKET', tk); fetchGlobalData(); }} t={t} />}
         {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} allUsers={allUsers} t={t} />}
-        {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} t={t} />}
-        {activePage === 'account' && (currentUser ? <Account user={currentUser} orders={orders} messages={messages} onSendMessage={(txt) => { syncToCloud('MESSAGE', {email: currentUser.email, productBought: txt}); }} onLogout={handleLogout} onRefresh={fetchGlobalData} isRefreshing={loading} t={t} /> : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} allUsers={allUsers} t={t} />)}
+        {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={(data) => {
+          const orderId = Math.random().toString(36).substr(2, 9).toUpperCase();
+          const newOrder: Order = {
+            id: orderId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            country: data.country,
+            productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
+            totalAmount: data.total,
+            date: new Date().toLocaleDateString(),
+            status: 'Payment Verifying', 
+            paymentMethod: data.paymentMethod
+          };
+          syncToCloud('ORDER', newOrder);
+          if (data.paymentMethod === 'solde') handleUpdateUserBalance(data.email, currentUser!.balance - data.total);
+          setCart([]);
+          setActivePage('account');
+          fetchGlobalData();
+        }} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} t={t} />}
+        
+        {activePage === 'account' && (currentUser ? <Account user={currentUser} orders={orders} messages={messages} onSendMessage={(txt) => { syncToCloud('MESSAGE', {email: currentUser.email, productBought: txt}); fetchGlobalData(); }} onLogout={handleLogout} onRefresh={fetchGlobalData} isRefreshing={loading} t={t} /> : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} allUsers={allUsers} t={t} />)}
+        
         {activePage === 'admin' && (
           <Admin 
             products={allProducts} orders={orders} tickets={tickets} promoCodes={promoCodes} messages={messages} users={allUsers}
             activityLogs={loginLogs}
             onUpdateUserBalance={handleUpdateUserBalance} 
-            onAddProduct={handleAddProduct} 
-            onUpdateProduct={(p) => { setAllProducts(prev => prev.map(i => i.id === p.id ? p : i)); syncToCloud('PRODUCT', p); }} 
-            onDeleteProduct={(id) => { setAllProducts(prev => prev.filter(i => i.id !== id)); }} 
+            onAddProduct={(p) => { syncToCloud('PRODUCT', p); fetchGlobalData(); }} 
+            onUpdateProduct={(p) => { syncToCloud('PRODUCT', p); fetchGlobalData(); }} 
+            onDeleteProduct={() => {}} 
             onUpdateOrderStatus={handleUpdateOrderStatus} 
-            onUpdateTicketStatus={(id, status) => { setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t)); syncToCloud('TICKET', {id, status}); }} 
-            onDeleteTicket={(id) => { setTickets(prev => prev.filter(t => t.id !== id)); }} 
+            onUpdateTicketStatus={(id, status) => { syncToCloud('TICKET', {id, status}); fetchGlobalData(); }} 
+            onDeleteTicket={() => {}} 
             onAddPromoCode={handleAddPromoCode} 
-            onDeletePromoCode={(id) => { setPromoCodes(prev => prev.filter(p => p.id !== id)); }} 
-            onAdminReply={(email, txt) => { syncToCloud('MESSAGE', {email, productBought: `[To: ${email}] ${txt}`}); }}
+            onDeletePromoCode={() => {}} 
+            // Fix shorthand property error: Wrap "first name" in quotes to allow it as an object key with spaces.
+            onAdminReply={(email, txt) => { syncToCloud('MESSAGE', {email, "first name": "Admin", productBought: `[To: ${email}] ${txt}`}); fetchGlobalData(); }}
             t={t}
           />
         )}
