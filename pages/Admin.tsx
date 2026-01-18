@@ -10,6 +10,7 @@ interface AdminProps {
   promoCodes: PromoCode[];
   messages: ChatMessage[];
   users: User[];
+  activityLogs?: any[];
   onUpdateUserBalance: (email: string, newBalance: number) => void;
   onAddProduct: (p: Product) => void;
   onUpdateProduct: (p: Product) => void;
@@ -24,7 +25,7 @@ interface AdminProps {
 }
 
 const Admin: React.FC<AdminProps> = ({ 
-  products, orders, tickets, promoCodes, messages, users,
+  products, orders, tickets, promoCodes, messages, users, activityLogs = [],
   onUpdateUserBalance, onAddProduct, onUpdateProduct, onDeleteProduct, onUpdateOrderStatus, 
   onUpdateTicketStatus, onDeleteTicket, onAddPromoCode, onDeletePromoCode,
   onAdminReply,
@@ -32,7 +33,7 @@ const Admin: React.FC<AdminProps> = ({
 }) => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [activeTab, setActiveTab] = useState<'stats' | 'catalog' | 'orders' | 'marketing' | 'chat' | 'users'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'catalog' | 'orders' | 'marketing' | 'chat' | 'users' | 'audit'>('stats');
   const tabsRef = useRef<HTMLDivElement>(null);
   
   // Search/Filter states
@@ -152,7 +153,7 @@ const Admin: React.FC<AdminProps> = ({
 
   if (!isAuthenticated) {
     return (
-      <div className="pt-32 pb-24 max-w-sm mx-auto px-4 text-center">
+      <div className="pt-32 pb-24 max-sm mx-auto px-4 text-center">
         <div className="bg-slate-900 border border-slate-800 p-10 rounded-[2rem] shadow-2xl relative overflow-hidden">
           <div className="hud-scanline opacity-10" />
           <h1 className="text-xl font-gaming font-black text-white mb-8 uppercase tracking-widest relative z-10">ADMIN TERMINAL</h1>
@@ -178,6 +179,7 @@ const Admin: React.FC<AdminProps> = ({
     { id: 'users', label: 'USERS', icon: 'users' },
     { id: 'chat', label: 'CHAT', icon: 'comments' },
     { id: 'marketing', label: 'COUPONS', icon: 'ticket-alt' },
+    { id: 'audit', label: 'GLOBAL AUDIT', icon: 'shield-alt' },
   ];
 
   return (
@@ -230,6 +232,53 @@ const Admin: React.FC<AdminProps> = ({
 
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl min-h-[600px] relative">
         <div className="hud-scanline opacity-5" />
+
+        {activeTab === 'audit' && (
+          <div className="space-y-6 animate-fade-in">
+            <h3 className="text-white font-gaming text-sm uppercase tracking-widest mb-6 flex items-center gap-4">
+              <i className="fas fa-terminal text-sky-500"></i>
+              Global Operations Monitor
+            </h3>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800">
+                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Timestamp</th>
+                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Origin IP</th>
+                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Operator</th>
+                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Protocol Action</th>
+                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[10px] font-mono">
+                  {activityLogs.map((log, i) => (
+                    <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-950/50 transition-colors">
+                      <td className="py-3 px-4 text-slate-400">{new Date(log.timestamp).toLocaleString()}</td>
+                      <td className="py-3 px-4 text-sky-400">{log.ip}</td>
+                      <td className="py-3 px-4 text-white font-bold">{log.userId || log.email || 'GUEST'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-[8px] font-gaming uppercase tracking-widest ${
+                          log.action === 'PURCHASE' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          log.action === 'LOGIN' ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' :
+                          'bg-slate-800 text-slate-400'
+                        }`}>
+                          {log.action}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 truncate max-w-xs">{log.details}</td>
+                    </tr>
+                  ))}
+                  {activityLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-20 text-center text-slate-700 uppercase font-gaming">No telemetry data recorded</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {activeTab === 'stats' && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-slide-up">

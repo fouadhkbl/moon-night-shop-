@@ -23,6 +23,16 @@ export interface User {
   balance: number; // User's Solde in DH
 }
 
+export interface ActivityLog {
+  timestamp: string;
+  ip: string;
+  action: string;
+  userId: string;
+  email: string;
+  details: string;
+  type: 'ACTIVITY_LOG';
+}
+
 export interface PromoCode {
   id: string;
   code: string;

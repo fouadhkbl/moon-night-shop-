@@ -10,9 +10,52 @@ import Admin from './pages/Admin';
 import Checkout from './pages/Checkout';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
-import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage, Language } from './types';
+import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage, Language, ActivityLog } from './types';
 import { PRODUCTS } from './constants';
 import { translations, TranslationKeys } from './translations';
+
+/**
+ * DATABASE CONNECTION CONFIGURATION (Google Apps Script)
+ * 
+ * Instructions:
+ * 1. Create a Google Sheet.
+ * 2. In Extensions > Apps Script, paste the following code:
+ * 
+ * function doPost(e) {
+ *   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+ *   var data = JSON.parse(e.postData.contents);
+ *   sheet.appendRow([
+ *     data.timestamp,
+ *     data.ip,
+ *     data.userId,
+ *     data.email,
+ *     data.action,
+ *     data.details,
+ *     data.type
+ *   ]);
+ *   return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+ * }
+ * 
+ * function doGet() {
+ *   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+ *   var data = sheet.getDataRange().getValues();
+ *   var results = [];
+ *   for (var i = 1; i < data.length; i++) {
+ *     results.push({
+ *       timestamp: data[i][0],
+ *       ip: data[i][1],
+ *       userId: data[i][2],
+ *       email: data[i][3],
+ *       action: data[i][4],
+ *       details: data[i][5],
+ *       type: data[i][6]
+ *     });
+ *   }
+ *   return ContentService.createTextOutput(JSON.stringify(results)).setMimeType(ContentService.MimeType.JSON);
+ * }
+ * 
+ * 3. Deploy as Web App with "Anyone" access.
+ */
 
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyrNB9GTXgYcMT6KA97xOmTZahp1Ou1yH5wjnXHNoG2UvvreAAWCw7sd19Ipa-HBGBT/exec";
 
@@ -33,14 +76,52 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
 
-  const stateRef = useRef({ cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language });
+  const stateRef = useRef({ cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language, activityLogs });
 
   useEffect(() => {
-    stateRef.current = { cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language };
-  }, [cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language]);
+    stateRef.current = { cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language, activityLogs };
+  }, [cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language, activityLogs]);
 
   const t = (key: TranslationKeys) => translations[language][key] || key;
+
+  const getIpAddress = async () => {
+    try {
+      const response = await fetch('https://api64.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (e) {
+      return 'UNKNOWN_IP';
+    }
+  };
+
+  const logActivity = async (action: string, details: any = {}) => {
+    const ip = await getIpAddress();
+    const timestamp = new Date().toISOString();
+    const payload = {
+      timestamp,
+      ip,
+      action,
+      userId: currentUser?.id || 'GUEST_UNAUTHORIZED',
+      email: currentUser?.email || details.email || 'N/A',
+      details: typeof details === 'object' ? JSON.stringify(details) : String(details),
+      type: 'ACTIVITY_LOG'
+    };
+
+    setActivityLogs(prev => [payload as ActivityLog, ...prev]);
+
+    try {
+      await fetch(SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.debug("Remote Database Log Sync Attempted");
+    }
+  };
 
   useEffect(() => {
     const initApp = async () => {
@@ -59,18 +140,35 @@ const App: React.FC = () => {
         const storedAllUsers = localStorage.getItem('mn_all_users');
         const storedLang = localStorage.getItem('mn_lang') as Language;
 
-        const sheetUsers = await sheetUsersPromise;
-        if (sheetUsers && Array.isArray(sheetUsers) && sheetUsers.length > 0) {
-          const mapped = sheetUsers.map((u: any, idx: number) => ({
-            id: u['email'] || u['gmail'] || `u-${idx}`,
-            name: u['first name'] || u['name'] || 'User',
-            email: u['email'] || u['gmail'] || '',
-            password: u['password'] || '',
-            state: 'ACTIVE',
-            joinedAt: u['date and time'] || u['time_date'] || new Date().toISOString(),
-            balance: 0
-          }));
-          setAllUsers(mapped);
+        const sheetData = await sheetUsersPromise;
+        if (sheetData && Array.isArray(sheetData) && sheetData.length > 0) {
+          const mappedUsers = sheetData
+            .filter((d: any) => d.type === 'USER_REGISTRY' || d.type === 'LOGIN_ACTION')
+            .map((u: any, idx: number) => ({
+              id: u.userId || u.email || `u-${idx}`,
+              name: u.name || 'User',
+              email: u.email || '',
+              password: u.password || '',
+              state: 'ACTIVE',
+              joinedAt: u.timestamp || new Date().toISOString(),
+              balance: 0
+            }));
+          
+          const uniqueUsers = Array.from(new Map(mappedUsers.map(item => [item['email'], item])).values());
+          setAllUsers(uniqueUsers as User[]);
+
+          const mappedLogs = sheetData
+            .filter((d: any) => d.type === 'ACTIVITY_LOG')
+            .map((l: any) => ({
+              timestamp: l.timestamp,
+              ip: l.ip || 'REMOTE',
+              action: l.action || 'TELEMETRY',
+              userId: l.userId,
+              email: l.email,
+              details: l.details,
+              type: 'ACTIVITY_LOG'
+            }));
+          setActivityLogs(mappedLogs as ActivityLog[]);
         } else if (storedAllUsers) {
           setAllUsers(JSON.parse(storedAllUsers));
         }
@@ -122,7 +220,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     saveAllState();
-  }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, language, saveAllState]);
+  }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, language, saveAllState, activityLogs]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
@@ -133,6 +231,7 @@ const App: React.FC = () => {
       return [...prev, { ...product, quantity: 1 }];
     });
     setIsCartOpen(true);
+    logActivity('ITEM_ADD_CART', { productId: product.id, productName: product.name });
   };
 
   const handleRemoveFromCart = (id: string) => setCart(prev => prev.filter(item => item.id !== id));
@@ -146,10 +245,12 @@ const App: React.FC = () => {
       if (existing) return prev;
       return [...prev, user];
     });
+    logActivity('USER_LOGIN', { email: user.email });
     setActivePage('home');
   };
 
   const handleLogout = () => {
+    logActivity('USER_LOGOUT', { email: currentUser?.email });
     setCurrentUser(null);
     setActivePage('home');
     localStorage.removeItem('mn_user');
@@ -192,29 +293,34 @@ const App: React.FC = () => {
     setOrders(prev => [newOrder, ...prev]);
     setCart([]);
     setLastOrderId(newOrder.id);
+    logActivity('ASSET_PURCHASE', { orderId, amount: data.total, assets: newOrder.productBought });
     setActivePage('account');
   };
 
   const handleSendTicket = (ticket: { name: string, email: string, message: string }) => {
     const newTicket: SupportTicket = { ...ticket, id: Date.now().toString(), date: new Date().toLocaleDateString(), status: 'New' };
     setTickets(prev => [newTicket, ...prev]);
+    logActivity('SUPPORT_UPLINK', { email: ticket.email });
   };
 
   const handleSendMessage = (text: string) => {
     if (!currentUser) return;
     const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: currentUser.email, senderName: currentUser.name, text, timestamp: new Date().toISOString(), isAdmin: false };
     setMessages(prev => [...prev, newMessage]);
+    logActivity('CHAT_TRANSMISSION', { email: currentUser.email });
   };
 
   const handleAdminReply = (userEmail: string, text: string) => {
     const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: 'grosafzemb@gmail.com', senderName: 'Admin', text: `[To: ${userEmail}] ${text}`, timestamp: new Date().toISOString(), isAdmin: true };
     setMessages(prev => [...prev, newMessage]);
+    logActivity('ADMIN_COMMS_REPLY', { targetEmail: userEmail });
   };
 
   const handleUpdateUserBalance = (email: string, balance: number) => {
     const emailLower = email.toLowerCase();
     setAllUsers(prev => prev.map(u => u.email?.toLowerCase() === emailLower ? { ...u, balance } : u));
     if (currentUser?.email?.toLowerCase() === emailLower) setCurrentUser(prev => prev ? { ...prev, balance } : null);
+    logActivity('CREDIT_RECONCILIATION', { target: email, newBalance: balance });
   };
 
   if (loading) {
@@ -319,6 +425,7 @@ const App: React.FC = () => {
         {activePage === 'admin' && (
           <Admin 
             products={allProducts} orders={orders} tickets={tickets} promoCodes={promoCodes} messages={messages} users={allUsers}
+            activityLogs={activityLogs}
             onUpdateUserBalance={handleUpdateUserBalance} onAddProduct={(p) => setAllProducts(prev => [p, ...prev])} onUpdateProduct={(p) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i))} onDeleteProduct={(id) => setAllProducts(prev => prev.filter(i => i.id !== id))} onUpdateOrderStatus={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} onUpdateTicketStatus={(id, status) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))} onDeleteTicket={(id) => setTickets(prev => prev.filter(t => t.id !== id))} onAddPromoCode={(promo) => setPromoCodes(prev => [promo, ...prev])} onDeletePromoCode={(id) => setPromoCodes(prev => prev.filter(p => p.id !== id))} onAdminReply={handleAdminReply}
             t={t}
           />
