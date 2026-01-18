@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
+/* Import TranslationKeys to define prop type */
+import { TranslationKeys } from '../translations';
 
 interface FooterProps {
   onSecretEntrance: () => void;
+  /* Add t prop to resolve TS mismatch */
+  t: (key: TranslationKeys) => string;
 }
 
-const Footer: React.FC<FooterProps> = ({ onSecretEntrance }) => {
+const Footer: React.FC<FooterProps> = ({ onSecretEntrance, t }) => {
   const [emailValue, setEmailValue] = useState('');
 
   const handleJoin = (e: React.FormEvent) => {

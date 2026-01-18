@@ -1,6 +1,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { CartItem, PromoCode, User } from '../types';
+/* Import TranslationKeys for prop typing */
+import { TranslationKeys } from '../translations';
 
 interface CheckoutProps {
   cart: CartItem[];
@@ -18,6 +20,8 @@ interface CheckoutProps {
   }) => void;
   onCancel: () => void;
   setActivePage: (page: string) => void;
+  /* Add t prop to resolve TS mismatch */
+  t: (key: TranslationKeys) => string;
 }
 
 const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }> = ({ 
@@ -26,15 +30,17 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
   currentUser, 
   onComplete, 
   onCancel,
-  setActivePage 
+  setActivePage,
+  t
 }) => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [step, setStep] = useState<'billing' | 'review'>('billing');
+  const [currency, setCurrency] = useState<'MAD' | 'USD'>('MAD');
   const [formData, setFormData] = useState({
     firstName: currentUser?.name?.split(' ')[0] || '',
     lastName: currentUser?.name?.split(' ')[1] || '',
     email: currentUser?.email || '',
-    country: 'Maroc',
+    country: 'Morocco',
   });
   
   const [paymentMethod, setPaymentMethod] = useState<'solde' | 'paypal' | 'card'>('paypal');
@@ -56,6 +62,13 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
 
   const isExternalPayment = paymentMethod === 'paypal' || paymentMethod === 'card';
 
+  const formatPrice = (amount: number) => {
+    if (currency === 'USD') {
+      return `$${(amount * 0.1).toFixed(2)}`;
+    }
+    return `${amount.toFixed(2)} DH`;
+  };
+
   const handleFinalSubmit = async (isExternalSuccess = false) => {
     if (isExternalPayment && !isExternalSuccess) return;
     setIsSubmitting(true);
@@ -69,17 +82,18 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
       productBought: cart.map(i => `${i.name} x${i.quantity}`).join(', '),
       totalAmount: totalAmountMAD,
       date: new Date().toISOString(),
-      payInfo: `PayMethod: ${paymentMethod.toUpperCase()}${isInstant ? ' (Auto)' : ''}`
+      payInfo: `Payment Method: ${paymentMethod.toUpperCase()}`,
+      product: cart.map(i => i.name).join(' | ')
     };
 
     try {
-      const logUrl = "https://script.google.com/macros/s/AKfycby2gXGh8SwZ4TrekT02pLmOW9NSh4h8Z87mugRZoH2xwJ1gZ23sDOFfqcKpEoTfAVk/exec";
+      const logUrl = "https://script.google.com/macros/s/AKfycbwVgM0oHf1Y-kR1OfclYBOwo5ePnDVxiW2WCxz6vwp6oM65bwDycByvLAobuZUfR7qt/exec";
       await fetch(logUrl, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(() => {});
+      }).catch((err) => console.debug("Sync error handled", err));
       
       onComplete({ ...formData, total: totalAmountMAD, appliedPromo: appliedPromo?.code, paymentMethod, isInstant });
     } catch (error) {
@@ -123,7 +137,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
       try {
         const paypal = (window as any).paypal;
         if (!paypal) {
-          if (isMounted) setPaypalError("SDK de paiement indisponible.");
+          if (isMounted) setPaypalError("Payment SDK unavailable.");
           isRenderingRef.current = false;
           return;
         }
@@ -150,11 +164,12 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
               await actions.order.capture();
               if (isMounted) {
                 setIsSuccess(true);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 setTimeout(() => handleFinalSubmit(true), 800);
               }
             } catch (e) {
               if (isMounted) { 
-                setPaypalError("Capture du paiement échouée."); 
+                setPaypalError("Payment capture failed."); 
                 setIsSubmitting(false); 
               }
             }
@@ -162,7 +177,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
           onInit: () => { if (isMounted) setIsPaypalReady(true); },
           onError: (err: any) => { 
             if (isMounted) {
-              setPaypalError("Erreur lors de l'initialisation du paiement.");
+              setPaypalError("Error initializing payment.");
               isRenderingRef.current = false;
             }
           },
@@ -170,8 +185,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
             layout: 'vertical', 
             color: paymentMethod === 'card' ? 'black' : 'gold', 
             shape: 'pill', 
-            height: 48,
-            label: paymentMethod === 'card' ? 'buynow' : 'pay'
+            height: 48
           }
         };
 
@@ -180,13 +194,13 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
           paypalInstanceRef.current = buttons;
           await buttons.render(paypalContainerRef.current);
         } else {
-          if (isMounted) setPaypalError("Ce mode de paiement n'est pas éligible.");
+          if (isMounted) setPaypalError("Payment method not supported.");
           isRenderingRef.current = false;
         }
       } catch (err) {
-        console.error("PayPal Init Error:", err);
+        console.error("PayPal Error:", err);
         if (isMounted) { 
-          setPaypalError("Erreur technique de paiement."); 
+          setPaypalError("Technical error during checkout."); 
           isRenderingRef.current = false; 
         }
       }
@@ -199,136 +213,167 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
   const handleApplyPromo = () => {
     const code = promoInput.toUpperCase().trim();
     const found = promoCodes.find(p => p.code === code);
-    if (found) { setAppliedPromo(found); } else { alert("Code invalide"); setAppliedPromo(null); }
+    if (found) { setAppliedPromo(found); } else { alert("Invalid voucher code."); setAppliedPromo(null); }
+  };
+
+  const handleProceedToReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep('review');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (!currentUser) {
     return (
       <div className="pt-40 pb-24 max-w-lg mx-auto px-6 text-center">
-        <div className="bg-slate-900 border-4 border-slate-800 p-16 rounded-[4rem] shadow-2xl">
-          <i className="fas fa-lock text-5xl text-sky-400 mb-8 block"></i>
-          <h2 className="text-2xl font-gaming font-bold text-white uppercase mb-10 tracking-widest">Login Required</h2>
-          <button onClick={() => setActivePage('auth')} className="w-full bg-sky-500 text-white font-gaming py-6 rounded-[2rem] text-sm uppercase tracking-[0.3em] font-black">ACCESS ACCOUNT</button>
+        <div className="bg-slate-900 border border-slate-800 p-12 rounded-[2rem] shadow-2xl">
+          <i className="fas fa-lock text-4xl text-sky-400 mb-6 block"></i>
+          <h3 className="text-white font-gaming uppercase mb-8">Authentication Required</h3>
+          <button onClick={() => setActivePage('auth')} className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl uppercase tracking-widest font-black">Login to Continue</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="pt-48 pb-24 max-w-5xl mx-auto px-6 animate-fade-in relative">
+    <div className="pt-32 sm:pt-40 pb-24 max-w-4xl mx-auto px-6 animate-fade-in relative">
       {isSuccess && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/95 backdrop-blur-md rounded-[5rem]">
-          <div className="text-center space-y-8">
-            <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border-2 border-green-500/30">
-              <i className="fas fa-check text-5xl text-green-500"></i>
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-8 bg-slate-950/95 backdrop-blur-md rounded-[3rem]">
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto border border-green-500/30">
+              <i className="fas fa-check text-4xl text-green-500"></i>
             </div>
-            <h2 className="text-4xl font-gaming font-black text-white uppercase tracking-[0.2em]">MISSION COMPLETE</h2>
-            <div className="w-10 h-10 border-4 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <h2 className="text-white font-gaming uppercase">Payment Confirmed</h2>
+            <p className="text-slate-400">Finalizing your order and syncing database...</p>
+            <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
           </div>
         </div>
       )}
 
-      <div className="bg-slate-900 border-4 border-slate-800 rounded-[5rem] overflow-hidden shadow-[0_40px_120px_rgba(0,0,0,0.5)]">
-        <div className="p-10 sm:p-20">
+      <div className="bg-slate-900 border border-slate-800 rounded-[3rem] overflow-hidden shadow-2xl">
+        <div className="p-8 sm:p-16">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-white font-gaming text-sm uppercase tracking-widest">
+              {step === 'billing' ? 'Billing Details' : 'Order Review'}
+            </h2>
+            
+            {/* Currency Converter Toggle */}
+            <div className="flex bg-slate-950 border border-slate-800 rounded-xl p-1 scale-90 sm:scale-100">
+              <button 
+                onClick={() => setCurrency('MAD')}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-gaming font-black transition-all ${currency === 'MAD' ? 'bg-sky-500 text-white' : 'text-slate-500 hover:text-white'}`}
+              >
+                MAD
+              </button>
+              <button 
+                onClick={() => setCurrency('USD')}
+                className={`px-3 py-1.5 rounded-lg text-[9px] font-gaming font-black transition-all ${currency === 'USD' ? 'bg-sky-500 text-white' : 'text-slate-500 hover:text-white'}`}
+              >
+                USD
+              </button>
+            </div>
+          </div>
+
           {step === 'billing' ? (
-            <form onSubmit={(e) => { e.preventDefault(); setStep('review'); }} className="space-y-12 animate-slide-up">
-              <h1 className="text-4xl font-gaming font-black text-white uppercase tracking-[0.2em]">PILOT DETAILS</h1>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <label className="text-xs font-gaming text-slate-500 uppercase tracking-widest ml-6 font-black">First Name</label>
-                  <input required placeholder="First Name" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-6 text-white focus:border-sky-500 outline-none text-xl font-bold" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
+            <form onSubmit={handleProceedToReview} className="space-y-8 animate-slide-up">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-gaming text-slate-500 uppercase tracking-widest ml-4">First Name</label>
+                  <input required placeholder="First Name" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-3.5 text-white focus:border-sky-500 outline-none text-sm" value={formData.firstName} onChange={(e) => setFormData({...formData, firstName: e.target.value})} />
                 </div>
-                <div className="space-y-4">
-                  <label className="text-xs font-gaming text-slate-500 uppercase tracking-widest ml-6 font-black">Last Name</label>
-                  <input required placeholder="Last Name" className="w-full bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-10 py-6 text-white focus:border-sky-500 outline-none text-xl font-bold" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
+                <div className="space-y-2">
+                  <label className="text-[9px] font-gaming text-slate-500 uppercase tracking-widest ml-4">Last Name</label>
+                  <input required placeholder="Last Name" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-3.5 text-white focus:border-sky-500 outline-none text-sm" value={formData.lastName} onChange={(e) => setFormData({...formData, lastName: e.target.value})} />
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <label className="text-xs font-gaming text-slate-500 uppercase tracking-widest ml-6 font-black">Voucher Protocol</label>
+              <div className="space-y-2">
+                <label className="text-[9px] font-gaming text-slate-500 uppercase tracking-widest ml-4">Promo Code</label>
                 <div className="flex space-x-4">
-                  <input placeholder="ENTER CODE" className="flex-1 bg-slate-950 border-4 border-slate-800 rounded-[2.5rem] px-8 py-6 text-white font-gaming uppercase outline-none text-xl font-bold" value={promoInput} onChange={(e) => setPromoInput(e.target.value)} />
-                  <button type="button" onClick={handleApplyPromo} className="bg-sky-500 px-12 rounded-[2.5rem] text-xs font-gaming text-white uppercase tracking-widest font-black">LINK</button>
+                  <input placeholder="ENTER CODE" className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-6 py-3.5 text-white font-gaming uppercase outline-none text-sm" value={promoInput} onChange={(e) => setPromoInput(e.target.value)} />
+                  <button type="button" onClick={handleApplyPromo} className="bg-sky-500 px-8 rounded-xl text-[10px] font-gaming text-white uppercase font-bold">Apply</button>
                 </div>
               </div>
 
-              <div className="space-y-8">
-                <label className="text-xs font-gaming text-slate-500 uppercase tracking-widest ml-6 font-black">Payment Protocol</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <button type="button" onClick={() => setPaymentMethod('solde')} className={`flex flex-col items-center p-10 rounded-[3rem] border-4 transition-all ${paymentMethod === 'solde' ? 'border-green-500 bg-green-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
-                    <i className="fas fa-wallet mb-4 text-3xl"></i>
-                    <span className="text-xs font-gaming uppercase font-black">Solde</span>
+              <div className="space-y-4">
+                <label className="text-[9px] font-gaming text-slate-500 uppercase tracking-widest ml-4">Payment Method</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <button type="button" onClick={() => setPaymentMethod('solde')} className={`flex flex-col items-center p-5 rounded-2xl border transition-all ${paymentMethod === 'solde' ? 'border-green-500 bg-green-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
+                    <i className="fas fa-wallet mb-2 text-xl"></i>
+                    <span className="text-[8px] font-gaming uppercase font-bold">Balance</span>
                   </button>
-                  <button type="button" onClick={() => setPaymentMethod('paypal')} className={`flex flex-col items-center p-10 rounded-[3rem] border-4 transition-all ${paymentMethod === 'paypal' ? 'border-[#ffc439] bg-[#ffc439]/10' : 'border-slate-800 hover:border-slate-700'}`}>
-                    <i className="fab fa-paypal mb-4 text-3xl"></i>
-                    <span className="text-xs font-gaming uppercase font-black">PayPal</span>
+                  <button type="button" onClick={() => setPaymentMethod('paypal')} className={`flex flex-col items-center p-5 rounded-2xl border transition-all ${paymentMethod === 'paypal' ? 'border-[#ffc439] bg-[#ffc439]/10' : 'border-slate-800 hover:border-slate-700'}`}>
+                    <i className="fab fa-paypal mb-2 text-xl"></i>
+                    <span className="text-[8px] font-gaming uppercase font-bold">PayPal</span>
                   </button>
-                  <button type="button" onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center p-10 rounded-[3rem] border-4 transition-all ${paymentMethod === 'card' ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
-                    <i className="fas fa-credit-card mb-4 text-3xl"></i>
-                    <span className="text-xs font-gaming uppercase font-black">Carte</span>
+                  <button type="button" onClick={() => setPaymentMethod('card')} className={`flex flex-col items-center p-5 rounded-2xl border transition-all ${paymentMethod === 'card' ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 hover:border-slate-700'}`}>
+                    <i className="fas fa-credit-card mb-2 text-xl"></i>
+                    <span className="text-[8px] font-gaming uppercase font-bold">Card</span>
                   </button>
                 </div>
               </div>
 
-              <div className="flex gap-6 pt-10">
-                <button type="button" onClick={onCancel} className="flex-1 bg-slate-950 text-slate-400 font-gaming py-7 rounded-[2.5rem] border-4 border-slate-800 uppercase tracking-widest text-xs hover:text-white transition-colors font-black">ABORT</button>
-                <button type="submit" className="flex-[2] bg-sky-500 text-white font-gaming py-7 rounded-[2.5rem] uppercase tracking-[0.3em] text-xs shadow-2xl shadow-sky-500/30 hover:bg-sky-600 transition-all font-black">INITIATE REVIEW</button>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={onCancel} className="flex-1 bg-slate-950 text-slate-600 font-gaming py-4 rounded-xl border border-slate-800 uppercase tracking-widest text-[10px] font-bold">Cancel</button>
+                <button type="submit" className="flex-[2] bg-sky-500 text-white font-gaming py-4 rounded-xl uppercase tracking-widest text-[10px] font-black shadow-lg shadow-sky-500/20">Review Order</button>
               </div>
             </form>
           ) : (
-            <div className="animate-fade-in space-y-12">
+            <div className="animate-fade-in space-y-10">
               <div className="text-center">
-                <h2 className="text-4xl font-gaming font-black text-white uppercase tracking-[0.2em]">FINAL UPLINK</h2>
-                <p className="text-slate-500 text-xs font-gaming uppercase tracking-[0.4em] mt-4 font-bold">Review deployment details</p>
+                <h3 className="text-white font-gaming uppercase text-sm">Summary</h3>
+                <p className="text-slate-500 text-[11px] mt-2">Displaying prices in {currency}</p>
               </div>
 
-              <div className="bg-slate-950 border-4 border-slate-800 rounded-[3rem] p-12 space-y-8">
-                <div className="flex justify-between items-center text-sm text-slate-400 font-gaming uppercase font-black">
-                  <span>Gross Total</span>
-                  <span>{subtotalAmountMAD.toFixed(2)} DH</span>
+              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-3">
+                <div className="flex justify-between items-center text-[10px] text-slate-500 font-gaming uppercase">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(subtotalAmountMAD)}</span>
                 </div>
                 {appliedPromo && (
-                  <div className="flex justify-between items-center text-sm text-green-500 font-gaming uppercase font-black">
-                    <span>Applied Discount ({appliedPromo.discount}%)</span>
-                    <span>-{discountAmount.toFixed(2)} DH</span>
+                  <div className="flex justify-between items-center text-[10px] text-green-500 font-gaming uppercase">
+                    <span>Discount ({appliedPromo.discount}%)</span>
+                    <span>-{formatPrice(discountAmount)}</span>
                   </div>
                 )}
-                <div className="pt-8 border-t-4 border-slate-800 flex justify-between items-center">
-                  <span className="text-white text-base font-gaming uppercase tracking-[0.3em] font-black">NET TOTAL</span>
-                  <span className="text-6xl font-gaming font-black text-sky-400 neon-text-blue">{totalAmountMAD.toFixed(2)} <span className="text-xl">DH</span></span>
+                <div className="pt-3 border-t border-slate-800 flex justify-between items-center">
+                  <span className="text-white font-gaming uppercase tracking-widest text-xs">Total</span>
+                  <span className="text-2xl font-gaming font-bold text-sky-400">{formatPrice(totalAmountMAD)}</span>
                 </div>
               </div>
 
-              <div className="space-y-10">
-                <label className="flex items-center space-x-6 cursor-pointer p-10 rounded-[3rem] bg-slate-950 border-4 border-slate-800 hover:border-slate-700 transition-all">
-                  <input type="checkbox" className="w-8 h-8 rounded-[1rem] bg-slate-950 text-sky-500 focus:ring-0 border-4 border-slate-800" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
-                  <span className="text-slate-400 text-xs font-gaming uppercase tracking-widest leading-relaxed font-bold">I confirm that all digital sales are final and non-refundable once deployed.</span>
+              <div className="space-y-6">
+                <label className="flex items-center space-x-4 cursor-pointer p-5 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all">
+                  <input type="checkbox" className="w-5 h-5 rounded bg-slate-950 text-sky-500 focus:ring-0 border-slate-800" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} />
+                  <span className="text-slate-500 text-[10px] font-bold leading-relaxed">I agree that digital items are non-refundable once issued.</span>
                 </label>
 
                 {isExternalPayment && agreedToTerms ? (
-                  <div className="w-full flex flex-col items-center min-h-[220px] animate-fade-in">
+                  <div className="w-full flex flex-col items-center min-h-[150px] animate-fade-in">
                     {!isPaypalReady && !paypalError && (
-                      <div className="flex flex-col items-center space-y-6 py-12">
-                        <div className="w-12 h-12 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-sky-400 text-xs font-gaming uppercase animate-pulse font-black tracking-widest">Bridging Gateway...</p>
+                      <div className="flex flex-col items-center space-y-4 py-8">
+                        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-sky-400 text-[9px] font-gaming uppercase tracking-widest">Secure Uplink...</p>
                       </div>
                     )}
                     {paypalError && (
-                      <div className="p-8 bg-red-500/10 border-4 border-red-500/20 rounded-[3rem] mb-8 w-full text-center">
-                        <p className="text-red-500 text-xs font-gaming uppercase font-black">{paypalError}</p>
+                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-4 w-full text-center">
+                        <p className="text-red-500 text-[10px] font-bold">{paypalError}</p>
                       </div>
                     )}
-                    <div id="paypal-button-container" ref={paypalContainerRef} className="w-full max-w-lg" />
+                    <div id="paypal-button-container" ref={paypalContainerRef} className="w-full" />
                   </div>
                 ) : (
-                  <div className="flex gap-6 w-full animate-fade-in">
-                    <button onClick={() => setStep('billing')} className="flex-1 bg-slate-950 text-slate-400 font-gaming py-7 rounded-[2.5rem] border-4 border-slate-800 uppercase tracking-widest text-xs font-black">BACK</button>
+                  <div className="flex gap-4 w-full">
+                    <button onClick={() => { setStep('billing'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex-1 bg-slate-950 text-slate-600 font-gaming py-4 rounded-xl border border-slate-800 uppercase text-[10px] font-bold">Back</button>
                     <button 
                       disabled={!agreedToTerms || isSubmitting || (paymentMethod === 'solde' && (currentUser?.balance || 0) < totalAmountMAD)}
-                      onClick={() => handleFinalSubmit(false)}
-                      className="flex-[2] bg-sky-500 text-white font-gaming py-7 rounded-[2.5rem] uppercase tracking-[0.3em] text-xs shadow-2xl shadow-sky-500/30 hover:bg-sky-600 transition-all disabled:opacity-30 font-black"
+                      onClick={() => {
+                        handleFinalSubmit(false);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="flex-[2] bg-sky-500 text-white font-gaming py-4 rounded-xl uppercase tracking-widest text-[10px] font-black shadow-lg shadow-sky-500/20 disabled:opacity-30"
                     >
-                      {isSubmitting ? 'INITIATING...' : (paymentMethod === 'solde' ? `CONFIRM DEPLOYMENT` : 'ACCEPT PROTOCOL')}
+                      {isSubmitting ? 'Processing...' : (paymentMethod === 'solde' ? `Confirm Payment` : 'Place Order')}
                     </button>
                   </div>
                 )}

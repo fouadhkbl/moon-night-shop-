@@ -10,12 +10,14 @@ import Admin from './pages/Admin';
 import Checkout from './pages/Checkout';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
-import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage } from './types';
+import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, User, ChatMessage, Language } from './types';
 import { PRODUCTS } from './constants';
+import { translations, TranslationKeys } from './translations';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
+  const [language, setLanguage] = useState<Language>('EN');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>([]);
@@ -30,11 +32,13 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  const stateRef = useRef({ cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers });
+  const stateRef = useRef({ cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language });
 
   useEffect(() => {
-    stateRef.current = { cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers };
-  }, [cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers]);
+    stateRef.current = { cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language };
+  }, [cart, wishlist, activePage, allProducts, orders, lastOrderId, tickets, promoCodes, currentUser, messages, allUsers, language]);
+
+  const t = (key: TranslationKeys) => translations[language][key] || key;
 
   useEffect(() => {
     const initApp = async () => {
@@ -49,6 +53,7 @@ const App: React.FC = () => {
         const storedUser = localStorage.getItem('mn_user');
         const storedMessages = localStorage.getItem('mn_messages');
         const storedAllUsers = localStorage.getItem('mn_all_users');
+        const storedLang = localStorage.getItem('mn_lang') as Language;
 
         if (storedProducts) setAllProducts(JSON.parse(storedProducts));
         else setAllProducts(PRODUCTS);
@@ -62,6 +67,7 @@ const App: React.FC = () => {
         if (storedUser) setCurrentUser(JSON.parse(storedUser));
         if (storedMessages) setMessages(JSON.parse(storedMessages));
         if (storedAllUsers) setAllUsers(JSON.parse(storedAllUsers));
+        if (storedLang) setLanguage(storedLang);
       } catch (e) {
         console.error("Initialization Error:", e);
         setAllProducts(PRODUCTS);
@@ -84,6 +90,7 @@ const App: React.FC = () => {
       localStorage.setItem('mn_promos', JSON.stringify(s.promoCodes));
       localStorage.setItem('mn_messages', JSON.stringify(s.messages));
       localStorage.setItem('mn_all_users', JSON.stringify(s.allUsers));
+      localStorage.setItem('mn_lang', s.language);
       if (s.currentUser) {
         localStorage.setItem('mn_user', JSON.stringify(s.currentUser));
       } else {
@@ -96,7 +103,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     saveAllState();
-  }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, saveAllState]);
+  }, [cart, wishlist, allProducts, orders, tickets, promoCodes, messages, allUsers, currentUser, language, saveAllState]);
 
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
@@ -183,7 +190,7 @@ const App: React.FC = () => {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
            <div className="w-16 h-16 border-4 border-sky-500 border-t-transparent rounded-full animate-spin"></div>
-           <p className="font-gaming text-sky-400 text-xs animate-pulse tracking-widest uppercase">Initialisation MoonNight...</p>
+           <p className="font-gaming text-sky-400 text-xs animate-pulse tracking-widest uppercase">MoonNight Loading...</p>
         </div>
       </div>
     );
@@ -191,8 +198,25 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-sky-500/30">
-      <Navbar cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} onOpenCart={() => setIsCartOpen(true)} activePage={activePage} setActivePage={setActivePage} user={currentUser} />
-      <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={cart} onRemove={handleRemoveFromCart} onUpdateQuantity={handleUpdateQuantity} onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }} />
+      <Navbar 
+        cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
+        onOpenCart={() => setIsCartOpen(true)} 
+        activePage={activePage} 
+        setActivePage={setActivePage} 
+        user={currentUser} 
+        language={language}
+        setLanguage={setLanguage}
+        t={t}
+      />
+      <CartSidebar 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+        items={cart} 
+        onRemove={handleRemoveFromCart} 
+        onUpdateQuantity={handleUpdateQuantity} 
+        onCheckout={() => { setIsCartOpen(false); setActivePage('checkout'); }} 
+        t={t}
+      />
       
       {/* Product Details Modal */}
       {selectedProduct && (
@@ -235,7 +259,7 @@ const App: React.FC = () => {
                     onClick={() => { handleAddToCart(selectedProduct!); setSelectedProduct(null); }}
                     className="flex-1 bg-sky-500 text-white font-gaming py-5 rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-sky-500/20 hover:bg-sky-600 transition-all active:scale-[0.98]"
                   >
-                    DEPLOY ASSET (BUY)
+                    {t('buyNow')}
                   </button>
                   <button 
                     onClick={() => handleToggleWishlist(selectedProduct!.id)}
@@ -251,32 +275,33 @@ const App: React.FC = () => {
       )}
 
       <main>
-        {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} />}
-        {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} />}
-        {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} />}
-        {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} allUsers={allUsers} />}
-        {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} />}
+        {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
+        {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} t={t} />}
+        {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} t={t} />}
+        {activePage === 'auth' && <Auth onLogin={handleLogin} onBack={() => setActivePage('shop')} allUsers={allUsers} t={t} />}
+        {activePage === 'checkout' && <Checkout cart={cart} promoCodes={promoCodes} currentUser={currentUser} onComplete={handleCheckoutComplete} onCancel={() => setActivePage('shop')} setActivePage={setActivePage} t={t} />}
         {activePage === 'account' && (
           currentUser 
-            ? <Account user={currentUser} orders={orders} messages={messages} onSendMessage={handleSendMessage} onLogout={handleLogout} onRefresh={() => {}} isRefreshing={false} />
-            : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} allUsers={allUsers} />
+            ? <Account user={currentUser} orders={orders} messages={messages} onSendMessage={handleSendMessage} onLogout={handleLogout} onRefresh={() => {}} isRefreshing={false} t={t} />
+            : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} allUsers={allUsers} t={t} />
         )}
         {activePage === 'admin' && (
           <Admin 
             products={allProducts} orders={orders} tickets={tickets} promoCodes={promoCodes} messages={messages} users={allUsers}
             onUpdateUserBalance={handleUpdateUserBalance} onAddProduct={(p) => setAllProducts(prev => [p, ...prev])} onUpdateProduct={(p) => setAllProducts(prev => prev.map(i => i.id === p.id ? p : i))} onDeleteProduct={(id) => setAllProducts(prev => prev.filter(i => i.id !== id))} onUpdateOrderStatus={(id, status) => setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o))} onUpdateTicketStatus={(id, status) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))} onDeleteTicket={(id) => setTickets(prev => prev.filter(t => t.id !== id))} onAddPromoCode={(promo) => setPromoCodes(prev => [promo, ...prev])} onDeletePromoCode={(id) => setPromoCodes(prev => prev.filter(p => p.id !== id))} onAdminReply={handleAdminReply}
+            t={t}
           />
         )}
         
         {/* Safe fallback for unknown pages */}
         {!['home', 'shop', 'contact', 'auth', 'checkout', 'account', 'admin'].includes(activePage) && (
           <div className="pt-40 pb-40 text-center animate-fade-in">
-             <h2 className="text-3xl font-gaming font-bold text-white uppercase tracking-widest mb-4">404 - Système Introuvable</h2>
-             <button onClick={() => setActivePage('home')} className="px-8 py-3 bg-sky-500 text-white rounded-xl font-gaming text-xs uppercase tracking-widest shadow-lg">Retour à la Base</button>
+             <h2 className="text-3xl font-gaming font-bold text-white uppercase tracking-widest mb-4">404 - Page Not Found</h2>
+             <button onClick={() => setActivePage('home')} className="px-8 py-3 bg-sky-500 text-white rounded-xl font-gaming text-xs uppercase tracking-widest shadow-lg">Return to Home</button>
           </div>
         )}
       </main>
-      <Footer onSecretEntrance={() => setActivePage('admin')} />
+      <Footer onSecretEntrance={() => setActivePage('admin')} t={t} />
     </div>
   );
 };

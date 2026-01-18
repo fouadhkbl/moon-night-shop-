@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Order, ChatMessage } from '../types';
+import { TranslationKeys } from '../translations';
 
 interface AccountProps {
   user: User;
@@ -10,198 +11,93 @@ interface AccountProps {
   onLogout: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  t: (key: TranslationKeys) => string;
 }
 
 const Account: React.FC<AccountProps> = ({ 
-  user, 
-  orders = [], 
-  messages = [], 
-  onSendMessage, 
-  onLogout, 
-  onRefresh,
-  isRefreshing 
+  user, orders = [], messages = [], onSendMessage, onLogout, onRefresh, isRefreshing, t
 }) => {
-  const [activeTab, setActiveTab] = useState<'vault' | 'chat'>('vault');
+  const [activeTab, setActiveTab] = useState<'orders' | 'chat'>('orders');
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Safe checks for user existence
-  if (!user) return null;
-
   const userEmail = user.email?.toLowerCase() || '';
   const userOrders = orders.filter(o => o.email?.toLowerCase() === userEmail);
-  
   const threadMessages = messages.filter(m => 
     m.senderEmail?.toLowerCase() === userEmail || 
     (m.isAdmin && m.text?.includes(`[To: ${user.email}]`))
   );
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    if (activeTab === 'chat') {
-      const timer = setTimeout(scrollToBottom, 100);
-      return () => clearTimeout(timer);
-    }
+    if (activeTab === 'chat') chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [threadMessages, activeTab]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    onSendMessage(chatInput);
-    setChatInput('');
-  };
-
   return (
-    <div className="pt-32 pb-24 max-w-5xl mx-auto px-4 animate-fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Profile Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2rem] text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5">
-              <i className="fas fa-wallet text-7xl"></i>
+    <div className="pt-24 sm:pt-40 pb-24 max-w-5xl mx-auto px-4 animate-fade-in">
+      <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
+        {/* Profile Section */}
+        <div className="lg:w-1/3 space-y-4">
+          <div className="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl sm:rounded-3xl text-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-sky-500/20">
+              <span className="text-2xl text-sky-400 font-gaming">{user.name?.charAt(0)}</span>
             </div>
-            <div className="w-20 h-20 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-sky-500/20 shadow-lg shadow-sky-500/5">
-              <span className="text-2xl text-sky-400 font-gaming uppercase font-bold">{user.name?.charAt(0) || 'U'}</span>
-            </div>
-            <h2 className="text-xl font-gaming font-bold text-white uppercase tracking-widest">{user.name || 'Utilisateur'}</h2>
-            <p className="text-slate-500 text-xs mb-6 truncate">{user.email || 'Pas d\'email'}</p>
+            <h3 className="text-white font-gaming text-sm sm:text-lg truncate">{user.name}</h3>
             
-            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 text-center">
-              <p className="text-[8px] font-gaming text-slate-500 uppercase tracking-widest mb-1">Votre Solde (DH)</p>
-              <p className="text-2xl font-gaming font-bold text-green-400">{(user.balance || 0).toFixed(2)} <span className="text-xs">DH</span></p>
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 my-6">
+              <p className="text-[8px] font-gaming text-slate-500 uppercase tracking-widest mb-1">Solde</p>
+              <p className="text-xl sm:text-2xl font-gaming text-green-400">{(user.balance || 0).toFixed(0)} DH</p>
             </div>
 
-            <div className="space-y-3">
-              <button 
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="w-full bg-slate-800/50 border border-slate-700/50 text-slate-300 py-3 rounded-xl font-gaming text-[9px] uppercase tracking-widest hover:bg-sky-500 hover:text-white hover:border-sky-400 transition-all flex items-center justify-center space-x-2"
-              >
-                <i className={`fas fa-sync-alt ${isRefreshing ? 'animate-spin' : ''}`}></i>
-                <span>{isRefreshing ? 'Actualiser' : 'Actualiser'}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={onRefresh} className="bg-slate-800 p-2.5 rounded-lg text-[8px] font-gaming uppercase text-slate-400 flex items-center justify-center gap-2">
+                <i className={`fas fa-sync-alt ${isRefreshing ? 'animate-spin' : ''}`}></i> Sync
               </button>
-              <button 
-                onClick={onLogout}
-                className="w-full bg-red-500/10 border border-red-500/20 text-red-500 py-3 rounded-xl font-gaming text-[9px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all"
-              >
-                Déconnexion
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-[2rem] space-y-4">
-            <h4 className="text-white font-gaming text-[10px] uppercase tracking-widest border-b border-slate-800 pb-3">Statistiques Compte</h4>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500 text-[10px] uppercase">Commandes</span>
-              <span className="text-sky-400 font-gaming text-sm">{userOrders.length}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-500 text-[10px] uppercase">Inscription</span>
-              <span className="text-white text-[10px]">{user.joinedAt?.split(',')[0] || 'Récemment'}</span>
+              <button onClick={onLogout} className="bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg text-[8px] font-gaming uppercase text-red-500">Exit</button>
             </div>
           </div>
         </div>
 
-        {/* Main Content Area */}
-        <div className="lg:col-span-2">
-          <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] overflow-hidden flex flex-col h-[600px] shadow-2xl">
-            {/* Tabs */}
-            <div className="flex bg-slate-950 p-2 m-4 rounded-2xl border border-slate-800">
-              <button 
-                onClick={() => setActiveTab('vault')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest transition-all ${activeTab === 'vault' ? 'bg-sky-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                <i className="fas fa-receipt mr-2"></i> Historique
-              </button>
-              <button 
-                onClick={() => setActiveTab('chat')}
-                className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest transition-all ${activeTab === 'chat' ? 'bg-sky-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                <i className="fas fa-comment-dots mr-2"></i> Contact Vendeur
-              </button>
+        {/* Content Section */}
+        <div className="lg:w-2/3">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col h-[550px] sm:h-[650px]">
+            <div className="flex bg-slate-950 p-1.5 m-4 sm:m-6 rounded-xl border border-slate-800">
+              <button onClick={() => setActiveTab('orders')} className={`flex-1 py-3 rounded-lg text-[9px] font-gaming uppercase tracking-widest ${activeTab === 'orders' ? 'bg-sky-500 text-white' : 'text-slate-500'}`}>Orders</button>
+              <button onClick={() => setActiveTab('chat')} className={`flex-1 py-3 rounded-lg text-[9px] font-gaming uppercase tracking-widest ${activeTab === 'chat' ? 'bg-sky-500 text-white' : 'text-slate-500'}`}>Support</button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              {activeTab === 'vault' ? (
-                <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-0 no-scrollbar">
+              {activeTab === 'orders' ? (
+                <div className="space-y-3">
                   {userOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center opacity-30 py-20">
-                      <i className="fas fa-shopping-bag text-6xl mb-4"></i>
-                      <p className="font-gaming text-xs uppercase tracking-widest">Aucune commande trouvée</p>
-                    </div>
+                    <p className="text-center opacity-20 py-10 text-[10px] uppercase font-gaming">No orders</p>
                   ) : (
-                    userOrders.map(order => (
-                      <div key={order.id} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl hover:border-sky-500/30 transition-all group">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <span className="text-sky-400 font-mono text-sm font-bold">#{order.id}</span>
-                            <p className="text-slate-500 text-[9px] font-gaming uppercase mt-1">{order.date}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-[8px] font-gaming uppercase tracking-widest border ${
-                            order.status === 'Completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                            order.status === 'Cancelled' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                            order.status === 'Processing' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' :
-                            'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 animate-pulse'
-                          }`}>
-                            {order.status}
-                          </span>
+                    userOrders.map(o => (
+                      <div key={o.id} className="bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-sky-400 font-mono text-[9px]">ID: {o.id}</span>
+                          <span className="text-[8px] text-green-500 uppercase font-gaming">{o.status}</span>
                         </div>
-                        <div className="space-y-2">
-                          <p className="text-white text-xs font-bold truncate">{order.productBought}</p>
-                          <div className="flex justify-between items-center pt-2 border-t border-slate-800/50">
-                            <span className="text-[10px] text-slate-500 uppercase">Montant Payé</span>
-                            <span className="text-sky-400 font-gaming text-sm">{order.totalAmount.toFixed(2)} DH</span>
-                          </div>
-                        </div>
+                        <p className="text-white text-[10px] font-bold truncate mb-3">{o.productBought}</p>
+                        <p className="text-slate-500 font-gaming text-[10px] text-right">{o.totalAmount.toFixed(0)} DH</p>
                       </div>
                     ))
                   )}
                 </div>
               ) : (
                 <div className="flex flex-col h-full">
-                  <div className="flex-1 space-y-4 mb-4">
-                    {threadMessages.length === 0 && (
-                      <div className="text-center py-10 opacity-20">
-                        <i className="fas fa-comments text-4xl mb-4"></i>
-                        <p className="text-[10px] font-gaming uppercase tracking-widest">Contactez nous pour toute question.</p>
-                      </div>
-                    )}
+                  <div className="flex-1 space-y-4 mb-4 overflow-y-auto no-scrollbar">
                     {threadMessages.map(msg => (
                       <div key={msg.id} className={`flex ${msg.isAdmin ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`max-w-[80%] p-4 rounded-2xl text-xs relative ${
-                          msg.isAdmin 
-                            ? 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700' 
-                            : 'bg-sky-500 text-white rounded-tr-none shadow-lg shadow-sky-500/10'
-                        }`}>
-                          {msg.isAdmin && <p className="text-[8px] font-gaming uppercase text-sky-400 mb-1">Support MoonNight</p>}
-                          <p className="leading-relaxed">{msg.text?.replace(`[To: ${user.email}]`, '')}</p>
-                          <span className={`text-[8px] mt-2 block opacity-40 ${msg.isAdmin ? 'text-left' : 'text-right'}`}>
-                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
+                        <div className={`max-w-[85%] p-3 rounded-xl text-[10px] ${msg.isAdmin ? 'bg-slate-800 text-slate-300' : 'bg-sky-500 text-white'}`}>
+                          <p>{msg.text.replace(`[To: ${user.email}]`, '')}</p>
                         </div>
                       </div>
                     ))}
                     <div ref={chatEndRef} />
                   </div>
-                  
-                  <form onSubmit={handleSend} className="relative mt-auto">
-                    <input 
-                      type="text" 
-                      placeholder="Tapez votre message..."
-                      className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 pr-16 text-xs text-white focus:outline-none focus:border-sky-500 transition-all shadow-inner"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                    />
-                    <button 
-                      type="submit"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-sky-500 text-white rounded-xl flex items-center justify-center hover:bg-sky-600 transition-all active:scale-95"
-                    >
-                      <i className="fas fa-paper-plane text-xs"></i>
-                    </button>
+                  <form onSubmit={(e)=>{e.preventDefault(); if(!chatInput.trim())return; onSendMessage(chatInput); setChatInput('');}} className="relative">
+                    <input type="text" placeholder="Message..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-sky-500" value={chatInput} onChange={e=>setChatInput(e.target.value)} />
+                    <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-sky-500 text-white rounded-lg flex items-center justify-center"><i className="fas fa-paper-plane text-[10px]"></i></button>
                   </form>
                 </div>
               )}

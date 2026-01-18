@@ -9,6 +9,8 @@ export type Category =
   | 'Software' 
   | 'Keys';
 
+export type Language = 'EN' | 'FR';
+
 export type OrderStatus = 'Pending' | 'Payment Verifying' | 'Processing' | 'Completed' | 'Cancelled';
 export type TicketStatus = 'New' | 'Read' | 'Replied';
 
