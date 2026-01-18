@@ -46,7 +46,7 @@ const Contact: React.FC<ContactProps> = ({ onSendTicket, t }) => {
               <div>
                 <h4 className="text-white font-gaming text-[9px] sm:text-xs font-black uppercase tracking-widest mb-1 sm:mb-2">Technical Uplink</h4>
                 <p className="text-slate-500 text-[8px] sm:text-xs mb-1 font-bold">Response priority: High (Within 12h)</p>
-                <a href="mailto:support@moonnight.shop" className="text-sky-400 text-sm sm:text-xl font-black hover:underline transition-all">support@moonnight.shop</a>
+                <a href="mailto:grosafzemb@gmail.com" className="text-sky-400 text-sm sm:text-xl font-black hover:underline transition-all">grosafzemb@gmail.com</a>
               </div>
             </div>
 

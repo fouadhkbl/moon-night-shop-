@@ -180,7 +180,7 @@ const App: React.FC = () => {
     if (currentUser) {
       const systemMsg: ChatMessage = {
         id: Date.now().toString() + '-sys',
-        senderEmail: 'system@moonnight.shop',
+        senderEmail: 'grosafzemb@gmail.com',
         senderName: 'SYSTEM',
         text: `[To: ${currentUser.email}] Order #${orderId} is under verification. Please wait for processing.`,
         timestamp: new Date().toISOString(),
@@ -207,7 +207,7 @@ const App: React.FC = () => {
   };
 
   const handleAdminReply = (userEmail: string, text: string) => {
-    const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: 'admin@moonnight.shop', senderName: 'Admin', text: `[To: ${userEmail}] ${text}`, timestamp: new Date().toISOString(), isAdmin: true };
+    const newMessage: ChatMessage = { id: Date.now().toString(), senderEmail: 'grosafzemb@gmail.com', senderName: 'Admin', text: `[To: ${userEmail}] ${text}`, timestamp: new Date().toISOString(), isAdmin: true };
     setMessages(prev => [...prev, newMessage]);
   };
 
