@@ -14,6 +14,8 @@ import { Product, CartItem, Order, OrderStatus, SupportTicket, TicketStatus, Pro
 import { PRODUCTS } from './constants';
 import { translations, TranslationKeys } from './translations';
 
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyrNB9GTXgYcMT6KA97xOmTZahp1Ou1yH5wjnXHNoG2UvvreAAWCw7sd19Ipa-HBGBT/exec";
+
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
@@ -43,6 +45,8 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       try {
+        const sheetUsersPromise = fetch(SHEET_URL).then(r => r.json()).catch(() => []);
+        
         const storedProducts = localStorage.getItem('mn_products');
         const storedOrders = localStorage.getItem('mn_orders');
         const storedCart = localStorage.getItem('mn_cart');
@@ -55,6 +59,23 @@ const App: React.FC = () => {
         const storedAllUsers = localStorage.getItem('mn_all_users');
         const storedLang = localStorage.getItem('mn_lang') as Language;
 
+        const sheetUsers = await sheetUsersPromise;
+        if (sheetUsers && Array.isArray(sheetUsers) && sheetUsers.length > 0) {
+          // Task 1 Mapping: Column A: first name | Column B: password | Column C: email | Column g: date and time
+          const mapped = sheetUsers.map((u: any, idx: number) => ({
+            id: u['email'] || u['gmail'] || `u-${idx}`,
+            name: u['first name'] || u['name'] || 'User',
+            email: u['email'] || u['gmail'] || '',
+            password: u['password'] || '',
+            state: 'ACTIVE',
+            joinedAt: u['date and time'] || u['time_date'] || new Date().toISOString(),
+            balance: 0
+          }));
+          setAllUsers(mapped);
+        } else if (storedAllUsers) {
+          setAllUsers(JSON.parse(storedAllUsers));
+        }
+
         if (storedProducts) setAllProducts(JSON.parse(storedProducts));
         else setAllProducts(PRODUCTS);
 
@@ -66,7 +87,6 @@ const App: React.FC = () => {
         if (storedPromos) setPromoCodes(JSON.parse(storedPromos));
         if (storedUser) setCurrentUser(JSON.parse(storedUser));
         if (storedMessages) setMessages(JSON.parse(storedMessages));
-        if (storedAllUsers) setAllUsers(JSON.parse(storedAllUsers));
         if (storedLang) setLanguage(storedLang);
       } catch (e) {
         console.error("Initialization Error:", e);
@@ -218,7 +238,6 @@ const App: React.FC = () => {
         t={t}
       />
       
-      {/* Product Details Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in" onClick={() => setSelectedProduct(null)}>
           <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto relative animate-scale-up shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -274,7 +293,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Added bottom padding on mobile for the new navigation bar */}
       <main className="pb-20 lg:pb-0">
         {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
         {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} t={t} />}
@@ -294,7 +312,6 @@ const App: React.FC = () => {
           />
         )}
         
-        {/* Safe fallback for unknown pages */}
         {!['home', 'shop', 'contact', 'auth', 'checkout', 'account', 'admin'].includes(activePage) && (
           <div className="pt-40 pb-40 text-center animate-fade-in">
              <h2 className="text-3xl font-gaming font-bold text-white uppercase tracking-widest mb-4">404 - Page Not Found</h2>

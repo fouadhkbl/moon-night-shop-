@@ -10,6 +10,8 @@ interface AuthProps {
   t: (key: TranslationKeys) => string;
 }
 
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyrNB9GTXgYcMT6KA97xOmTZahp1Ou1yH5wjnXHNoG2UvvreAAWCw7sd19Ipa-HBGBT/exec";
+
 const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('signup');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +31,49 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
     const emailLower = formData.email.toLowerCase().trim();
     const existingUser = allUsers.find(u => u.email.toLowerCase() === emailLower);
 
+    // Task 1: Login Verification Logic
+    if (mode === 'login') {
+      if (!existingUser) {
+        setError("NO ACCOUNT FOUND. PLEASE SIGN UP.");
+        setIsLoading(false);
+        setMode('signup');
+        return;
+      }
+      
+      const userWithPass = existingUser as any;
+      if (userWithPass.password && userWithPass.password !== formData.password) {
+        setError("INVALID CREDENTIALS. ACCESS DENIED.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Log Login Event with exact requested columns for User Sheet
+      try {
+        await fetch(SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            "first name": existingUser.name,
+            "password": formData.password,
+            "email": emailLower,
+            "date and time": new Date().toLocaleString(),
+            type: 'LOGIN_ACTION'
+          })
+        });
+      } catch (err) {
+        console.debug("Login sync attempted");
+      }
+
+      localStorage.setItem('mn_user', JSON.stringify(existingUser));
+      setTimeout(() => {
+        onLogin(existingUser);
+        setIsLoading(false);
+      }, 800);
+      return;
+    }
+
+    // Task 1: Sign Up Logic
     if (mode === 'signup' && existingUser) {
       setError("ACCOUNT ALREADY EXISTS. PLEASE LOGIN.");
       setIsLoading(false);
@@ -36,37 +81,25 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
       return;
     }
 
-    if (mode === 'login' && !existingUser) {
-      setError("NO ACCOUNT FOUND. PLEASE SIGN UP.");
-      setIsLoading(false);
-      setMode('signup');
-      return;
-    }
-
     const now = new Date();
-    const actionLabel = mode === 'login' ? 'Login' : (mode === 'signup' ? 'Signup' : 'Reset');
-
+    
+    // Task 1 Mapping (Users Sheet):
+    // Column A: first name | Column B: password | Column C: email | Column G: date and time
     const payload = {
-      firstName: formData.name || 'User',
-      lastName: mode.toUpperCase(),
-      email: emailLower,
-      contry: 'Web',
-      productBought: `Action: ${actionLabel}`,
-      totalAmount: 0,
-      date: now.toISOString(),
-      password: formData.password,
-      product: 'Auth Session',
-      authInfo: `Session: ${actionLabel}`
+      "first name": formData.name || emailLower.split('@')[0],
+      "password": formData.password,
+      "email": emailLower,
+      "date and time": now.toLocaleString(),
+      type: 'USER_REGISTRY'
     };
 
     try {
-      const logUrl = "https://script.google.com/macros/s/AKfycbwVgM0oHf1Y-kR1OfclYBOwo5ePnDVxiW2WCxz6vwp6oM65bwDycByvLAobuZUfR7qt/exec";
-      await fetch(logUrl, {
+      await fetch(SHEET_URL, {
         method: 'POST',
         mode: 'no-cors', 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch((err) => console.debug("Sync error", err));
+      });
 
       if (mode === 'forgot') {
         setResetSent(true);
@@ -74,8 +107,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
         return;
       }
 
-      const finalUser: User = existingUser || {
-        id: Math.random().toString(36).substr(2, 9).toUpperCase(),
+      const finalUser: User = {
+        id: emailLower,
         name: formData.name || emailLower.split('@')[0],
         email: emailLower,
         state: 'ACTIVE',

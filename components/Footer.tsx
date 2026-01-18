@@ -90,7 +90,7 @@ const Footer: React.FC<FooterProps> = ({ onSecretEntrance, t }) => {
         
         <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <p className="text-slate-500 text-[10px] font-gaming uppercase">
-            © 2024 MoonNight Shop. Tous droits réservés.
+            © 2026 MoonNight Shop. Tous droits réservés.
           </p>
           <div className="flex items-center space-x-4 opacity-50 grayscale hover:grayscale-0 transition-all">
             <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" className="h-4" alt="PayPal" />
