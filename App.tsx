@@ -274,7 +274,8 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <main>
+      {/* Added bottom padding on mobile for the new navigation bar */}
+      <main className="pb-20 lg:pb-0">
         {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
         {activePage === 'shop' && <Shop products={allProducts} onAddToCart={handleAddToCart} onViewDetails={(p) => setSelectedProduct(p)} onToggleWishlist={handleToggleWishlist} wishlist={wishlist} t={t} />}
         {activePage === 'contact' && <Contact onSendTicket={handleSendTicket} t={t} />}

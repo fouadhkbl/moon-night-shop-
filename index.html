@@ -8,18 +8,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.paypal.com/sdk/js?client-id=AZVpU1vUh4HC_6QK2T5e9pXXMwLsu3yNUmjvMMEp_CsEwaN4CwLfRzfLnZqpC9bRyeeQ1mDvMhqx2-Zq&currency=USD"></script>
     <style>
       :root {
-        --primary: #0ea5e9;
-        --secondary: #a855f7;
+        --primary: #00FFFF;
+        --primary-glow: rgba(0, 255, 255, 0.4);
         --bg-dark: #020617;
-        --bg-card: #0f172a;
+        --bg-hud: #0a0f1e;
+        --accent: #3b82f6;
       }
       * {
         -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
       }
       body {
         font-family: 'Inter', sans-serif;
@@ -34,15 +36,46 @@
       }
       .font-gaming {
         font-family: 'Orbitron', sans-serif;
+        letter-spacing: 0.05em;
       }
-      .neon-text-blue {
-        text-shadow: 0 0 15px rgba(14, 165, 233, 0.6);
+      .font-mono {
+        font-family: 'Roboto Mono', monospace;
+      }
+      .neon-text-cyan {
+        color: var(--primary);
+        text-shadow: 0 0 10px var(--primary-glow);
       }
       .glass {
-        background: rgba(15, 23, 42, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(10, 15, 30, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 255, 255, 0.08);
+      }
+      .hud-card {
+        background: var(--bg-hud);
+        border: 1px solid rgba(0, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+      .hud-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        border-top: 1px solid var(--primary);
+        border-left: 1px solid var(--primary);
+      }
+      .hud-card::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 8px;
+        height: 8px;
+        border-bottom: 1px solid var(--primary);
+        border-right: 1px solid var(--primary);
       }
       .no-scrollbar::-webkit-scrollbar {
         display: none;
@@ -52,23 +85,47 @@
         scrollbar-width: none;
       }
 
+      @keyframes scanline {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+      }
+      .hud-scanline {
+        width: 100%;
+        height: 100px;
+        background: linear-gradient(0deg, transparent, rgba(0, 255, 255, 0.05), transparent);
+        position: absolute;
+        animation: scanline 8s linear infinite;
+        pointer-events: none;
+      }
+
       /* Entrance Animations */
       @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
       @keyframes slide-up { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes scale-up { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
       
       .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
       .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      .animate-scale-up { animation: scale-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       
-      /* Smooth Hover Movement */
-      .hover-lift { transition: transform 0.25s ease; }
-      .hover-lift:hover { transform: translateY(-4px); }
-
-      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: #0ea5e9; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+      /* Bottom Nav Refinement */
+      .nav-button-glow {
+        background: radial-gradient(circle at center, rgba(0, 255, 255, 0.15) 0%, transparent 70%);
+      }
+
+      /* Snow Canvas Styling */
+      #snow-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0.6;
+      }
     </style>
   <script type="importmap">
 {
@@ -81,7 +138,82 @@
 </script>
 </head>
   <body>
+    <canvas id="snow-canvas"></canvas>
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
+    <script>
+      (function() {
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles;
+
+        function init() {
+          width = window.innerWidth;
+          height = window.innerHeight;
+          canvas.width = width;
+          canvas.height = height;
+          particles = [];
+          
+          // Generate 120 snow particles
+          for (let i = 0; i < 120; i++) {
+            particles.push({
+              x: Math.random() * width,
+              y: Math.random() * height,
+              r: Math.random() * 2.5 + 0.5, // Particle size
+              d: Math.random() * 1, // Density/drifting
+              s: Math.random() * 0.8 + 0.2, // Falling speed
+              o: Math.random() * 0.5 + 0.1  // Individual opacity
+            });
+          }
+        }
+
+        function draw() {
+          ctx.clearRect(0, 0, width, height);
+          
+          for (let p of particles) {
+            ctx.fillStyle = `rgba(0, 255, 255, ${p.o})`; // Subtle Cyan color for HUD effect
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+            ctx.fill();
+            
+            // Add a very subtle glow to larger particles
+            if (p.r > 2) {
+              ctx.shadowBlur = 10;
+              ctx.shadowColor = "rgba(0, 255, 255, 0.4)";
+            } else {
+              ctx.shadowBlur = 0;
+            }
+          }
+          update();
+        }
+
+        function update() {
+          for (let p of particles) {
+            p.y += p.s;
+            // Add subtle horizontal swaying
+            p.x += Math.sin(p.y / 60) * 0.3;
+            
+            // Loop particles back to the top
+            if (p.y > height) {
+              p.y = -10;
+              p.x = Math.random() * width;
+            }
+            
+            // Loop particles across sides if swaying too far
+            if (p.x > width) p.x = 0;
+            if (p.x < 0) p.x = width;
+          }
+        }
+
+        function loop() {
+          draw();
+          requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('resize', init);
+        init();
+        loop();
+      })();
+    </script>
   </body>
 </html>

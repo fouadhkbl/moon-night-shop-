@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { User, Language } from '../types';
 import { TranslationKeys } from '../translations';
 
@@ -15,155 +15,127 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setActivePage, user, language, setLanguage, t }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const navLinks: { id: string; label: TranslationKeys }[] = [
-    { id: 'home', label: 'home' },
-    { id: 'shop', label: 'shop' },
-    { id: 'contact', label: 'support' },
+  const navLinks: { id: string; label: TranslationKeys; icon: string }[] = [
+    { id: 'home', label: 'home', icon: 'fa-home' },
+    { id: 'shop', label: 'shop', icon: 'fa-shopping-basket' },
+    { id: 'contact', label: 'support', icon: 'fa-headset' },
   ];
 
   const handlePageChange = (pageId: string) => {
     setActivePage(pageId);
-    setIsMenuOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[100] glass border-b border-sky-500/20 h-20 sm:h-28 transition-all duration-300">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-full">
-        <div className="flex items-center justify-between h-full">
-          
-          {/* MOBILE ONLY: Professional Hamburger on the LEFT with "Etage" look */}
-          <div className="lg:hidden flex items-center w-12">
-            <button 
-              className="w-10 h-10 flex flex-col items-start justify-center space-y-1.5 focus:outline-none z-[80] group"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+    <>
+      {/* TOP NAVIGATION BAR */}
+      <nav className="fixed top-0 left-0 right-0 z-[100] glass border-b border-cyan-500/20 h-16 sm:h-24 transition-all duration-300">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-full">
+          <div className="flex items-center justify-between h-full">
+            
+            {/* Logo Area */}
+            <div 
+              className="flex items-center space-x-2 sm:space-x-4 cursor-pointer group flex-shrink-0"
+              onClick={() => handlePageChange('home')}
             >
-              <span className={`block h-0.5 bg-slate-100 transition-all duration-300 ease-out ${isMenuOpen ? 'w-6 rotate-45 translate-y-2' : 'w-6'}`}></span>
-              <span className={`block h-0.5 bg-sky-400 transition-all duration-300 ease-out ${isMenuOpen ? 'opacity-0 translate-x-4' : 'w-4'}`}></span>
-              <span className={`block h-0.5 bg-slate-100 transition-all duration-300 ease-out ${isMenuOpen ? 'w-6 -rotate-45 -translate-y-2' : 'w-5'}`}></span>
-            </button>
-          </div>
-
-          {/* Logo Area */}
-          <div 
-            className="flex items-center space-x-2 sm:space-x-5 cursor-pointer group lg:flex-1"
-            onClick={() => handlePageChange('home')}
-          >
-            <div className="relative w-8 h-8 sm:w-16 sm:h-16 flex-shrink-0 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg sm:rounded-2xl shadow-lg flex items-center justify-center transform group-hover:scale-110 transition-all">
-              <span className="text-white font-gaming font-black text-sm sm:text-4xl">M</span>
+              <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-[0_0_15px_rgba(0,255,255,0.3)] flex items-center justify-center transform group-hover:scale-105 transition-all">
+                <span className="text-white font-gaming font-black text-sm sm:text-2xl">M</span>
+              </div>
+              <span className="text-white font-gaming text-sm sm:text-2xl lg:text-3xl font-black tracking-tight whitespace-nowrap uppercase">
+                MoonNight <span className="text-cyan-400">Shop</span>
+              </span>
             </div>
-            <span className="text-white font-gaming text-base sm:text-3xl lg:text-4xl font-black tracking-tight whitespace-nowrap">
-              MoonNight <span className="text-sky-400">Shop</span>
-            </span>
-          </div>
 
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center justify-center space-x-12 flex-[2]">
-            {navLinks.map((link) => (
-              <button
-                key={link.id}
-                onClick={() => handlePageChange(link.id)}
-                className={`text-sm xl:text-lg font-gaming uppercase tracking-widest font-black transition-all hover:text-sky-400 ${
-                  activePage === link.id ? 'text-sky-400 neon-text-blue' : 'text-slate-400'
+            {/* Desktop Only Center Nav */}
+            <div className="hidden lg:flex items-center justify-center space-x-12 flex-1">
+              {navLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handlePageChange(link.id)}
+                  className={`text-[11px] xl:text-[13px] font-gaming uppercase tracking-[0.2em] font-bold transition-all hover:text-cyan-400 ${
+                    activePage === link.id ? 'neon-text-cyan' : 'text-slate-500'
+                  }`}
+                >
+                  {t(link.label)}
+                </button>
+              ))}
+            </div>
+
+            {/* Right Icons Area */}
+            <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+              <div className="hidden md:flex bg-slate-900/50 border border-slate-800 rounded-lg p-0.5">
+                <button onClick={() => setLanguage('EN')} className={`px-2.5 py-1 rounded text-[8px] font-gaming font-black transition-all ${language === 'EN' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-500'}`}>EN</button>
+                <button onClick={() => setLanguage('FR')} className={`px-2.5 py-1 rounded text-[8px] font-gaming font-black transition-all ${language === 'FR' ? 'bg-cyan-500 text-slate-950 shadow-sm' : 'text-slate-500'}`}>FR</button>
+              </div>
+
+              <button 
+                onClick={() => handlePageChange(user ? 'account' : 'auth')}
+                className={`p-2 sm:p-2.5 rounded-lg border transition-all ${
+                  user ? 'text-cyan-400 border-cyan-500/20 bg-cyan-500/5' : 'text-slate-500 border-transparent hover:text-cyan-400'
                 }`}
               >
-                {t(link.label)}
+                <i className="fas fa-user-circle text-lg sm:text-2xl"></i>
               </button>
-            ))}
-          </div>
 
-          {/* Icons Area */}
-          <div className="flex items-center justify-end space-x-2 sm:space-x-6 lg:flex-1">
-            <div className="hidden md:flex bg-slate-900/50 border border-slate-800 rounded-lg p-0.5">
-              <button onClick={() => setLanguage('EN')} className={`px-2 py-0.5 rounded text-[8px] font-gaming font-black transition-all ${language === 'EN' ? 'bg-sky-500 text-white' : 'text-slate-500'}`}>EN</button>
-              <button onClick={() => setLanguage('FR')} className={`px-2 py-0.5 rounded text-[8px] font-gaming font-black transition-all ${language === 'FR' ? 'bg-sky-500 text-white' : 'text-slate-500'}`}>FR</button>
+              <button 
+                onClick={onOpenCart}
+                className="relative p-2 sm:p-2.5 text-slate-500 hover:text-cyan-400 transition-all transform active:scale-90"
+              >
+                <i className="fas fa-shopping-bag text-lg sm:text-2xl"></i>
+                {cartCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-cyan-500 text-slate-950 text-[8px] sm:text-[10px] font-black w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center rounded-full border-2 border-slate-950 shadow-[0_0_10px_rgba(0,255,255,0.4)]">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
             </div>
+          </div>
+        </div>
+      </nav>
 
-            <button 
-              onClick={() => handlePageChange(user ? 'account' : 'auth')}
-              className={`p-2 sm:p-3 rounded-lg border transition-all ${
-                user ? 'text-sky-400 border-sky-500/20 bg-sky-500/5' : 'text-slate-500 border-transparent hover:text-sky-400'
-              }`}
-            >
-              <i className="fas fa-user-circle text-xl sm:text-3xl"></i>
-            </button>
+      {/* MOBILE BOTTOM NAVIGATION BAR: HIGH-END NEON HUD */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-950/98 backdrop-blur-2xl border-t border-cyan-500/40 h-16 flex justify-around items-center px-4 pb-safe shadow-[0_-15px_40px_rgba(0,0,0,0.8)]">
+        <div className="hud-scanline opacity-10" />
 
-            <button 
-              onClick={onOpenCart}
-              className="relative p-2 sm:p-3 text-slate-500 hover:text-sky-400 transition-all transform active:scale-90"
+        {navLinks.map((link) => {
+          const isActive = activePage === link.id;
+          return (
+            <button
+              key={link.id}
+              onClick={() => handlePageChange(link.id)}
+              className="relative flex flex-col items-center justify-center w-full h-full transition-all group overflow-hidden"
             >
-              <i className="fas fa-shopping-bag text-xl sm:text-3xl"></i>
-              {cartCount > 0 && (
-                <span className="absolute top-0 right-0 bg-sky-500 text-white text-[10px] sm:text-[12px] font-black w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full border-2 border-slate-950">
-                  {cartCount}
+              {isActive && (
+                <div className="absolute inset-0 nav-button-glow animate-pulse" />
+              )}
+              
+              <div className={`flex flex-col items-center justify-center space-y-1 transition-all duration-300 ${
+                isActive ? 'translate-y-0' : 'translate-y-0.5'
+              }`}>
+                <div className="relative">
+                  <i className={`fas ${link.icon} ${isActive ? 'text-xl text-cyan-400' : 'text-lg text-slate-500'} transition-all`}></i>
+                  {isActive && (
+                    <div className="absolute -inset-2 bg-cyan-400/20 rounded-full blur-lg animate-pulse -z-1" />
+                  )}
+                </div>
+                <span className={`text-[8px] font-gaming font-black uppercase tracking-[0.25em] transition-all ${
+                  isActive ? 'text-cyan-400' : 'text-slate-600'
+                }`}>
+                  {t(link.label)}
                 </span>
+              </div>
+              
+              {isActive && (
+                <>
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-cyan-400 shadow-[0_0_15px_rgba(0,255,255,0.6)] rounded-b-full" />
+                  <div className="absolute bottom-1.5 w-1 h-1 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(0,255,255,1)]" />
+                </>
               )}
             </button>
-          </div>
-        </div>
+          );
+        })}
       </div>
-
-      {/* MOBILE MENU DRAWER - DEEP BLACK BACKGROUND */}
-      <div className={`lg:hidden fixed inset-0 z-[70] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-        isMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Deepest Black Overlay */}
-        <div className="absolute inset-0 bg-[#020617] border-r border-slate-800" />
-        
-        <div className="relative flex flex-col h-full pt-20">
-          <div className="flex-1 flex flex-col items-center justify-center space-y-8 px-8">
-            {navLinks.map((link, idx) => (
-              <button
-                key={link.id}
-                onClick={() => handlePageChange(link.id)}
-                className={`text-2xl font-gaming uppercase tracking-[0.3em] font-black transition-all transform duration-500 ${
-                  isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
-                } ${
-                  activePage === link.id ? 'text-sky-400 neon-text-blue scale-105' : 'text-slate-300 hover:text-white'
-                }`}
-                style={{ transitionDelay: `${100 + idx * 50}ms` }}
-              >
-                {t(link.label)}
-              </button>
-            ))}
-          </div>
-
-          {/* DISTINCT LANGUAGE SECTION */}
-          <div className={`p-6 pb-12 transition-all duration-700 transform ${
-            isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'
-          }`} style={{ transitionDelay: '300ms' }}>
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 shadow-xl">
-              <p className="text-center text-[7px] font-gaming text-slate-500 uppercase tracking-widest mb-4">Select Region</p>
-              
-              <div className="flex space-x-2">
-                 <button 
-                  onClick={() => setLanguage('EN')} 
-                  className={`flex-1 py-3 rounded-lg text-[9px] font-gaming font-black transition-all ${
-                    language === 'EN' 
-                    ? 'bg-sky-500 text-white shadow-lg' 
-                    : 'bg-slate-950 text-slate-600 border border-slate-800'
-                  }`}
-                 >
-                   ENGLISH
-                 </button>
-                 <button 
-                  onClick={() => setLanguage('FR')} 
-                  className={`flex-1 py-3 rounded-lg text-[9px] font-gaming font-black transition-all ${
-                    language === 'FR' 
-                    ? 'bg-sky-500 text-white shadow-lg' 
-                    : 'bg-slate-950 text-slate-600 border border-slate-800'
-                  }`}
-                 >
-                   FRANÇAIS
-                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
+    </>
   );
 };
 
