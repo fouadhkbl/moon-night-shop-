@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Product, Order, OrderStatus, SupportTicket, TicketStatus, PromoCode, ChatMessage, Category, User } from '../types';
 import { TranslationKeys } from '../translations';
 
@@ -34,22 +34,17 @@ const Admin: React.FC<AdminProps> = ({
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState<'stats' | 'catalog' | 'orders' | 'marketing' | 'chat' | 'users' | 'audit'>('stats');
-  const tabsRef = useRef<HTMLDivElement>(null);
   
   const [userSearch, setUserSearch] = useState('');
-  const [chatFilterEmail, setChatFilterEmail] = useState('');
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [editingBalance, setEditingBalance] = useState<{email: string, value: string} | null>(null);
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState<Partial<Product>>({ 
-    name: '', price: 0, category: 'Games', stock: 10, description: '', features: [], image: ''
+    name: '', price: 0, category: 'Games', stock: 10, description: '', features: [], image: '', 
+    brand: '', usp: '', fullAccess: '', itemsAmount: ''
   });
-
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,30 +52,26 @@ const Admin: React.FC<AdminProps> = ({
     else alert('Invalid Authorization Key');
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductForm({ ...productForm, image: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+  const openProductModal = (product?: Product) => {
+    if (product) {
+      setEditingProduct(product);
+      setProductForm(product);
+    } else {
+      setEditingProduct(null);
+      setProductForm({ 
+        name: '', price: 0, category: 'Games', stock: 10, description: '', features: [], image: '', 
+        brand: '', usp: '', fullAccess: 'YES', itemsAmount: '' 
+      });
     }
+    setIsProductModalOpen(true);
   };
 
-  const saveProduct = () => {
-    if (!productForm.name || !productForm.price) return alert('Name and Price are mandatory.');
-    if (editingProduct) onUpdateProduct({ ...editingProduct, ...productForm } as Product);
-    else onAddProduct({ ...productForm, id: Math.random().toString(36).substr(2, 9), rating: 5.0 } as Product);
+  const handleProductSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const p = { ...productForm, id: editingProduct ? editingProduct.id : Date.now().toString() } as Product;
+    if (editingProduct) onUpdateProduct(p);
+    else onAddProduct(p);
     setIsProductModalOpen(false);
-    setEditingProduct(null);
-  };
-
-  const handleCreateCoupon = () => {
-    if (!couponCode || couponDiscount <= 0) return alert('Enter valid code and percentage');
-    onAddPromoCode({ id: Date.now().toString(), code: couponCode.toUpperCase(), discount: couponDiscount });
-    setCouponCode('');
-    setCouponDiscount(0);
   };
 
   const handleSaveBalance = (email: string) => {
@@ -109,11 +100,20 @@ const Admin: React.FC<AdminProps> = ({
   if (!isAuthenticated) {
     return (
       <div className="pt-32 pb-24 max-w-sm mx-auto px-4 text-center">
-        <div className="bg-slate-900 border border-slate-800 p-10 rounded-[2rem] shadow-2xl">
-          <h1 className="text-xl font-gaming font-black text-white mb-8 uppercase tracking-widest">ADMIN TERMINAL</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input type="password" placeholder="SECRET KEY" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-3 text-white text-center focus:border-sky-500 outline-none text-lg font-gaming" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl tracking-widest font-black uppercase text-xs shadow-lg">AUTHORIZE</button>
+        <div className="bg-white border border-slate-200 p-12 rounded-[3rem] shadow-2xl">
+          <div className="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center mx-auto mb-10 shadow-lg">
+            <span className="text-white font-gaming font-black text-2xl">M</span>
+          </div>
+          <h1 className="text-xl font-gaming font-black text-slate-900 mb-10 uppercase tracking-widest">ADMIN PORTAL</h1>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <input 
+              type="password" 
+              placeholder="SECRET KEY" 
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-8 py-5 text-slate-900 text-center focus:border-blue-700 outline-none text-lg font-gaming shadow-sm" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+            />
+            <button className="w-full bg-blue-700 text-white font-gaming py-5 rounded-2xl tracking-widest font-black uppercase text-xs shadow-xl shadow-blue-200">AUTHORIZE ACCESS</button>
           </form>
         </div>
       </div>
@@ -125,20 +125,20 @@ const Admin: React.FC<AdminProps> = ({
     { id: 'catalog', label: 'CATALOGUE', icon: 'layer-group' },
     { id: 'orders', label: 'ORDERS', icon: 'receipt' },
     { id: 'users', label: 'USERS', icon: 'users' },
-    { id: 'chat', label: 'CHAT', icon: 'comments' },
+    { id: 'chat', label: 'SUPPORT', icon: 'comments' },
     { id: 'marketing', label: 'COUPONS', icon: 'ticket-alt' },
-    { id: 'audit', label: 'GMAIL LOGS', icon: 'shield-alt' },
+    { id: 'audit', label: 'TELEMETRY', icon: 'shield-alt' },
   ];
 
   return (
-    <div className="pt-24 sm:pt-36 pb-24 max-w-7xl mx-auto px-4 sm:px-8 animate-fade-in">
-      <div className="flex overflow-x-auto gap-2 no-scrollbar mb-8 pb-2">
+    <div className="pt-24 sm:pt-40 pb-24 max-w-7xl mx-auto px-4 sm:px-8 animate-fade-in">
+      <div className="flex overflow-x-auto gap-3 no-scrollbar mb-10 pb-2">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-shrink-0 px-8 py-4 rounded-xl font-gaming text-[11px] uppercase font-black transition-all border whitespace-nowrap ${
-              activeTab === tab.id ? 'bg-sky-500 text-white border-sky-400 shadow-lg' : 'bg-slate-900 text-slate-500 border-slate-800'
+            className={`flex-shrink-0 px-8 py-4 rounded-2xl font-gaming text-[11px] uppercase font-black transition-all border whitespace-nowrap ${
+              activeTab === tab.id ? 'bg-blue-700 text-white border-blue-600 shadow-lg shadow-blue-100' : 'bg-white text-slate-400 border-slate-100 hover:border-blue-200'
             }`}
           >
             <i className={`fas fa-${tab.icon} mr-3`}></i>{tab.label}
@@ -146,27 +146,41 @@ const Admin: React.FC<AdminProps> = ({
         ))}
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl min-h-[500px]">
-        {activeTab === 'audit' && (
-          <div className="space-y-6">
-            <h3 className="text-white font-gaming text-sm uppercase tracking-widest mb-6">Cloud Telemetry: Login History</h3>
+      <div className="bg-white border border-slate-100 rounded-[2rem] p-8 sm:p-14 shadow-2xl min-h-[600px]">
+        {activeTab === 'catalog' && (
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-gaming font-black text-slate-900 uppercase">Product Library</h2>
+              <button onClick={() => openProductModal()} className="bg-blue-700 text-white px-6 py-3 rounded-xl text-[10px] font-gaming font-black uppercase shadow-lg shadow-blue-100">Add Entry</button>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-slate-800">
-                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Operator Email</th>
-                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Password Key</th>
-                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Origin IP</th>
-                    <th className="py-4 px-4 text-[9px] font-gaming text-slate-500 uppercase">Timestamp</th>
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Product</th>
+                    <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Specs</th>
+                    <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Price</th>
+                    <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="text-[10px] font-mono">
-                  {activityLogs.map((log, i) => (
-                    <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-950/50">
-                      <td className="py-3 px-4 text-sky-400 font-bold">{log.email}</td>
-                      <td className="py-3 px-4 text-slate-500">{log.password}</td>
-                      <td className="py-3 px-4 text-white">{log.ip}</td>
-                      <td className="py-3 px-4 text-slate-600">{new Date(log.timestamp).toLocaleString()}</td>
+                <tbody className="text-sm">
+                  {products.map(p => (
+                    <tr key={p.id} className="border-b border-slate-50">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center space-x-3">
+                          <img src={p.image} className="w-10 h-10 rounded-lg object-cover" />
+                          <div className="font-bold">{p.name}</div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-[9px] text-slate-400 font-mono uppercase">
+                          {p.brand || 'No Brand'} | {p.itemsAmount || 'N/A'} Amt
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 font-black">{p.price} DH</td>
+                      <td className="py-4 px-6">
+                        <button onClick={() => openProductModal(p)} className="text-blue-600 font-bold mr-4">Edit</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -175,136 +189,111 @@ const Admin: React.FC<AdminProps> = ({
           </div>
         )}
 
+        {/* Modal for Adding/Editing Product with Spec Fields */}
+        {isProductModalOpen && (
+          <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-[2rem] max-w-2xl w-full p-8 sm:p-12 relative animate-slide-up my-auto">
+              <h2 className="text-2xl font-gaming font-black text-slate-900 mb-8 uppercase">Product Registry</h2>
+              <form onSubmit={handleProductSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Name</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.name} onChange={e=>setProductForm({...productForm, name: e.target.value})} required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Base Price (DH)</label>
+                  <input type="number" className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.price} onChange={e=>setProductForm({...productForm, price: parseFloat(e.target.value)})} required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Brand</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.brand} onChange={e=>setProductForm({...productForm, brand: e.target.value})} placeholder="e.g. Fortnite" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">USP</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.usp} onChange={e=>setProductForm({...productForm, usp: e.target.value})} placeholder="High Quantity" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Full Access Status</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.fullAccess} onChange={e=>setProductForm({...productForm, fullAccess: e.target.value})} placeholder="YES" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Items/Currency Amount</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.itemsAmount} onChange={e=>setProductForm({...productForm, itemsAmount: e.target.value})} placeholder="e.g. 5000" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Stock Count</label>
+                  <input type="number" className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.stock} onChange={e=>setProductForm({...productForm, stock: parseInt(e.target.value)})} required />
+                </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase">Image URL</label>
+                  <input className="w-full border p-3 rounded-xl bg-slate-50" value={productForm.image} onChange={e=>setProductForm({...productForm, image: e.target.value})} required />
+                </div>
+                <div className="sm:col-span-2 flex space-x-4 pt-4">
+                  <button type="button" onClick={()=>setIsProductModalOpen(false)} className="flex-1 border p-4 rounded-xl font-bold">Cancel</button>
+                  <button type="submit" className="flex-1 bg-blue-700 text-white p-4 rounded-xl font-black uppercase">Save Entry</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'stats' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-               <p className="text-[10px] font-gaming text-slate-500 uppercase mb-2">Total Volume</p>
-               <p className="text-3xl font-gaming text-green-400">{orders.reduce((a,c)=>a+c.totalAmount,0).toFixed(0)} DH</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div className="bg-slate-50 p-10 rounded-3xl border border-slate-100">
+               <p className="text-[10px] font-gaming text-slate-400 uppercase mb-4 tracking-widest font-black">Gross Revenue</p>
+               <p className="text-4xl font-gaming text-blue-700 font-black">{orders.reduce((a,c)=>a+c.totalAmount,0).toFixed(0)} <span className="text-xs">DH</span></p>
             </div>
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-               <p className="text-[10px] font-gaming text-slate-500 uppercase mb-2">Asset Deployments</p>
-               <p className="text-3xl font-gaming text-sky-400">{orders.length}</p>
+            <div className="bg-slate-50 p-10 rounded-3xl border border-slate-100">
+               <p className="text-[10px] font-gaming text-slate-400 uppercase mb-4 tracking-widest font-black">Deliveries</p>
+               <p className="text-4xl font-gaming text-blue-600 font-black">{orders.length}</p>
             </div>
-            <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-               <p className="text-[10px] font-gaming text-slate-500 uppercase mb-2">Registered Personnel</p>
-               <p className="text-3xl font-gaming text-indigo-400">{users.length}</p>
+            <div className="bg-slate-50 p-10 rounded-3xl border border-slate-100">
+               <p className="text-[10px] font-gaming text-slate-400 uppercase mb-4 tracking-widest font-black">Users</p>
+               <p className="text-4xl font-gaming text-indigo-700 font-black">{users.length}</p>
             </div>
           </div>
         )}
 
+        {/* User Search & Balance Logic */}
         {activeTab === 'users' && (
-          <div className="space-y-4">
-            <input type="text" placeholder="SEARCH DATABASE..." className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-[10px] font-gaming text-white mb-6" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
-            {users.filter(u => u.email.includes(userSearch)).map(u => (
-              <div key={u.id} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl flex justify-between items-center">
-                <div>
-                  <p className="text-white text-xs font-black uppercase">{u.name}</p>
-                  <p className="text-slate-500 text-[8px] font-mono">{u.email}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    {editingBalance?.email === u.email ? (
-                      <input type="number" className="w-20 bg-slate-900 border border-sky-500 rounded px-2 py-1 text-white text-[11px]" value={editingBalance.value} onChange={e=>setEditingBalance({...editingBalance, value:e.target.value})} onBlur={()=>handleSaveBalance(u.email)} autoFocus />
-                    ) : (
-                      <p className="text-green-500 font-gaming text-sm cursor-pointer" onClick={()=>setEditingBalance({email:u.email, value:u.balance.toString()})}>{u.balance.toFixed(0)} DH</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'orders' && (
-          <div className="space-y-4">
-             {orders.map(o => (
-               <div key={o.id} className="bg-slate-950 border border-slate-800 p-5 rounded-2xl">
-                 <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <p className="text-sky-400 font-mono text-[9px]">#{o.id}</p>
-                      <p className="text-white text-[11px] font-black">{o.firstName} {o.lastName}</p>
-                    </div>
-                    <select value={o.status} onChange={(e) => onUpdateOrderStatus(o.id, e.target.value as OrderStatus)} className="bg-slate-900 border border-slate-800 rounded p-1 text-[9px] text-sky-400">
-                      <option value="Pending">Pending</option>
-                      <option value="Payment Verifying">Verifying</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Completed">Completed</option>
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                 </div>
-                 <p className="text-slate-500 text-[9px] mt-2 uppercase">{o.productBought}</p>
-               </div>
-             ))}
-          </div>
-        )}
-
-        {activeTab === 'catalog' && (
-          <div className="space-y-6">
-            <button onClick={() => setIsProductModalOpen(true)} className="bg-sky-500 text-white font-gaming px-6 py-2 rounded-xl text-[10px] uppercase font-black">+ Add Asset</button>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map(p => (
-                <div key={p.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex gap-4">
-                  <img src={p.image} className="w-12 h-12 object-cover rounded-lg" />
-                  <div className="flex-1">
-                    <p className="text-white text-[10px] font-black uppercase truncate">{p.name}</p>
-                    <p className="text-sky-400 font-gaming text-[9px]">{p.price.toFixed(0)} DH</p>
-                  </div>
-                </div>
-              ))}
+          <div className="space-y-8">
+            <div className="relative">
+              <input type="text" placeholder="QUERY DATABASE BY EMAIL..." className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-10 py-5 text-[12px] font-gaming text-slate-900 shadow-sm focus:border-blue-700 outline-none" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+              <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
             </div>
-          </div>
-        )}
-
-        {activeTab === 'chat' && (
-          <div className="space-y-8">
-            {Object.keys(messageThreads).map(email => (
-              <div key={email} className="bg-slate-950 border border-slate-800 rounded-2xl p-6">
-                <h4 className="text-sky-400 font-gaming text-xs uppercase mb-4">{email}</h4>
-                <div className="space-y-2 mb-4 max-h-40 overflow-y-auto pr-2">
-                  {messageThreads[email].map((m, i) => (
-                    <p key={i} className={`text-[10px] p-2 rounded-lg ${m.isAdmin ? 'bg-indigo-500/10 text-indigo-400 text-right' : 'bg-slate-900 text-slate-300'}`}>{m.text}</p>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="REPLY..." className="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-4 text-[10px] text-white outline-none" value={replyText[email] || ''} onChange={e => setReplyText({...replyText, [email]: e.target.value})} />
-                  <button onClick={() => { onAdminReply(email, replyText[email]); setReplyText({...replyText, [email]: ''}); }} className="bg-sky-500 px-4 py-2 rounded-lg"><i className="fas fa-paper-plane text-slate-950"></i></button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {activeTab === 'marketing' && (
-          <div className="space-y-8">
-             <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                <input placeholder="PROTOCOL CODE" className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white font-gaming text-xs mr-4" value={couponCode} onChange={e=>setCouponCode(e.target.value)} />
-                <input type="number" placeholder="DISCOUNT %" className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-white font-gaming text-xs mr-4" value={couponDiscount || ''} onChange={e=>setCouponDiscount(parseInt(e.target.value))} />
-                <button onClick={handleCreateCoupon} className="bg-sky-500 px-6 py-2 rounded-xl text-xs font-gaming font-black text-slate-950">FORGE</button>
-             </div>
-             {promoCodes.map(promo => (
-               <div key={promo.id} className="bg-slate-950 border border-slate-800 p-4 rounded-xl flex justify-between">
-                  <span className="text-sky-400 font-gaming font-black">{promo.code}</span>
-                  <span className="text-green-500">-{promo.discount}%</span>
-               </div>
-             ))}
+            <div className="overflow-x-auto">
+               <table className="w-full text-left">
+                 <thead className="bg-slate-50 border-b border-slate-100">
+                   <tr>
+                     <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">User Info</th>
+                     <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Balance (DH)</th>
+                     <th className="py-4 px-6 text-[10px] font-gaming text-slate-400 uppercase">Actions</th>
+                   </tr>
+                 </thead>
+                 <tbody className="text-sm">
+                   {users.filter(u => u.email.includes(userSearch)).map(u => (
+                     <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                       <td className="py-4 px-6">
+                         <div className="font-bold text-slate-900">{u.name}</div>
+                         <div className="text-[10px] text-slate-400 font-mono">{u.email}</div>
+                       </td>
+                       <td className="py-4 px-6">
+                         {editingBalance?.email === u.email ? (
+                           <input type="number" className="w-24 bg-white border border-blue-600 rounded-lg px-2 py-1 text-slate-900 text-sm font-black" value={editingBalance.value} onChange={e=>setEditingBalance({...editingBalance, value:e.target.value})} onBlur={()=>handleSaveBalance(u.email)} autoFocus />
+                         ) : (
+                           <span className="text-blue-700 font-black cursor-pointer hover:underline" onClick={()=>setEditingBalance({email:u.email, value:u.balance.toString()})}>{u.balance.toFixed(0)} DH</span>
+                         )}
+                       </td>
+                       <td className="py-4 px-6">
+                         <button className="text-[10px] font-gaming text-blue-600 font-black hover:underline uppercase">LOGS</button>
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+            </div>
           </div>
         )}
       </div>
-
-      {isProductModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-slate-800 rounded-[2rem] max-w-lg w-full p-8 relative">
-            <button onClick={() => setIsProductModalOpen(false)} className="absolute top-6 right-6 text-slate-500"><i className="fas fa-times"></i></button>
-            <h2 className="text-xl font-gaming font-black text-white uppercase mb-8">Asset Forge</h2>
-            <div className="space-y-4">
-              <input placeholder="NAME" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-white text-xs outline-none" value={productForm.name} onChange={e=>setProductForm({...productForm, name: e.target.value})} />
-              <input type="number" placeholder="PRICE (DH)" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-white text-xs outline-none" value={productForm.price || ''} onChange={e=>setProductForm({...productForm, price: parseFloat(e.target.value)})} />
-              <input placeholder="IMAGE URL" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-3 text-white text-xs outline-none" value={productForm.image} onChange={e=>setProductForm({...productForm, image: e.target.value})} />
-              <button onClick={saveProduct} className="w-full bg-sky-500 text-slate-950 font-gaming py-4 rounded-xl uppercase font-black">INITIALIZE ASSET</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

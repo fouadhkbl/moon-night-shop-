@@ -50,6 +50,11 @@ export interface Product {
   features: string[];
   stock: number;
   rating: number;
+  // Dynamic Specifications
+  brand?: string;
+  usp?: string;
+  fullAccess?: string;
+  itemsAmount?: string;
 }
 
 export interface CartItem extends Product {

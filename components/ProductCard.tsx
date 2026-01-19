@@ -19,74 +19,71 @@ const ProductCard: React.FC<ProductCardProps> = ({
   isWishlisted,
   t
 }) => {
-  const discount = product.originalPrice ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
   const buyText = t ? t('buyNow') : 'BUY NOW';
 
   return (
-    <div className="group relative hud-card rounded-xl overflow-hidden hover:border-cyan-500/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,255,255,0.1)] h-full flex flex-col">
-      {/* Product Image */}
-      <div 
-        className="relative aspect-square sm:aspect-[16/10] overflow-hidden cursor-pointer"
-        onClick={() => onViewDetails(product)}
-      >
+    <div 
+      className="group relative bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-blue-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] flex items-center p-3 sm:p-5 mb-3 cursor-pointer"
+      onClick={() => onViewDetails(product)}
+    >
+      {/* Product Image - Left Side with intensified zoom */}
+      <div className="relative w-20 h-20 sm:w-32 sm:h-32 flex-shrink-0 overflow-hidden rounded-lg bg-slate-50 border border-slate-100">
         <img 
           src={product.image} 
           alt={product.name} 
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-125"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60" />
+        {/* Category Badge overlay on image */}
+        <div className="absolute bottom-0 left-0 right-0 bg-blue-700/90 backdrop-blur-sm text-[6px] sm:text-[8px] text-white text-center py-1 font-gaming uppercase font-bold tracking-widest transition-colors group-hover:bg-blue-600">
+          {product.category}
+        </div>
+      </div>
+
+      {/* Details - Center */}
+      <div className="flex-1 px-4 sm:px-6 flex flex-col justify-center min-w-0">
+        <h3 className="text-slate-900 font-bold text-[12px] sm:text-[16px] mb-1 sm:mb-2 line-clamp-2 leading-tight font-sans group-hover:text-blue-700 transition-colors">
+          {product.name}
+        </h3>
+        <div className="flex items-center space-x-2">
+          <span className="inline-block bg-slate-50 border border-slate-200 text-slate-500 px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-medium transition-colors group-hover:bg-blue-50 group-hover:border-blue-200 group-hover:text-blue-700">
+            {product.stock > 0 ? `${product.stock} Stock` : 'Out of stock'}
+          </span>
+          <span className="inline-block bg-blue-50 border border-blue-100 text-blue-600 px-2 py-0.5 rounded text-[8px] sm:text-[10px] font-bold">
+            Full Access
+          </span>
+        </div>
+      </div>
+
+      {/* Price Area - Right Side */}
+      <div className="flex flex-col items-end justify-center min-w-[80px] sm:min-w-[120px] text-right">
+        <span className="text-slate-400 text-[9px] sm:text-[11px] font-medium lowercase italic">starting from</span>
+        <div className="text-[16px] sm:text-[24px] font-gaming font-black text-slate-900 tracking-tighter leading-none group-hover:text-blue-700 transition-colors">
+          <span className="text-[10px] sm:text-[14px] mr-0.5">$</span>
+          {(product.price * 0.1).toFixed(2)}
+        </div>
         
-        {discount > 0 && (
-          <div className="absolute top-2 left-2 bg-cyan-500 text-white text-[7px] font-bold px-2 py-0.5 rounded font-gaming shadow-lg">
-            -{discount}%
-          </div>
-        )}
-        
+        {/* Intensified Action Button with Neon Glow */}
         <button 
           onClick={(e) => {
             e.stopPropagation();
-            onToggleWishlist(product.id);
+            onAddToCart(product);
           }}
-          className={`absolute top-2 right-2 p-1.5 rounded-full glass transition-all ${isWishlisted ? 'text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]' : 'text-white hover:text-red-500'}`}
+          className="mt-3 bg-blue-700 text-white px-3 sm:px-6 py-1.5 sm:py-2 rounded-lg text-[8px] sm:text-[10px] font-gaming uppercase font-black transition-all duration-300 active:scale-90 shadow-sm group-hover:bg-blue-600 group-hover:shadow-[0_0_20px_rgba(29,78,216,0.6),0_0_40px_rgba(29,78,216,0.3)] group-hover:ring-2 group-hover:ring-blue-400 group-hover:ring-offset-2 group-hover:scale-105"
         >
-          <svg className="w-2.5 h-2.5 sm:w-3.5 h-3.5" fill={isWishlisted ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-          </svg>
+          {buyText}
         </button>
       </div>
 
-      {/* Details */}
-      <div className="p-4 sm:p-5 flex flex-col flex-1">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-[7px] sm:text-[10px] font-gaming text-slate-500 uppercase tracking-widest font-bold">{product.category}</span>
-          <div className="flex items-center text-yellow-500">
-            <i className="fas fa-star text-[7px] sm:text-[9px]" />
-            <span className="text-[8px] sm:text-[11px] ml-1 text-slate-400 font-bold">{product.rating}</span>
-          </div>
-        </div>
-        
-        <h3 
-          className="text-white font-bold text-[13px] sm:text-[18px] mb-4 line-clamp-2 cursor-pointer hover:text-cyan-400 transition-colors leading-tight min-h-[2.8em] font-gaming uppercase tracking-tight"
-          onClick={() => onViewDetails(product)}
-        >
-          {product.name}
-        </h3>
-        
-        <div className="flex items-center justify-between mt-auto pt-4 border-t border-cyan-500/10">
-          <div className="flex flex-col">
-            {product.originalPrice && (
-              <span className="text-slate-600 text-[8px] sm:text-[11px] line-through font-mono">{product.originalPrice.toFixed(0)} DH</span>
-            )}
-            <span className="text-[12px] sm:text-[17px] font-gaming font-black text-cyan-400 neon-text-cyan">{product.price.toFixed(0)} DH</span>
-          </div>
-          <button 
-            onClick={() => onAddToCart(product)}
-            className="bg-slate-800 text-white px-4 py-2.5 rounded-lg text-[8px] sm:text-[11px] font-gaming uppercase font-black hover:bg-cyan-500 hover:text-slate-950 hover:shadow-[0_0_15px_rgba(0,255,255,0.4)] transition-all active:scale-90"
-          >
-            {buyText}
-          </button>
-        </div>
-      </div>
+      {/* Wishlist Toggle - Subtle corner */}
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggleWishlist(product.id);
+        }}
+        className={`absolute top-2 right-2 p-1.5 text-slate-300 hover:text-red-500 transition-colors z-10 ${isWishlisted ? 'text-red-500' : ''}`}
+      >
+        <i className={`${isWishlisted ? 'fas' : 'far'} fa-heart text-[10px] sm:text-sm`}></i>
+      </button>
     </div>
   );
 };
