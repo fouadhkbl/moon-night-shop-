@@ -28,22 +28,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t })
     const emailInput = formData.email.toLowerCase().trim();
     const passInput = formData.password;
 
-    // Validate against Cloud Records (GET results)
+    // STEP 1: Search for existing identity in the cloud
     const existingRecord = cloudRecords.find(r => (r.gmail || "").toLowerCase() === emailInput);
 
     if (mode === 'login') {
+      // LOGIN PROTOCOL: Email must exist AND password must match
       if (!existingRecord) {
-        setError("UPLINK FAILED: Gmail not found in cloud database.");
+        setError("UPLINK DENIED: Account does not exist in the cloud database.");
         setIsLoading(false);
         return;
       }
       if (existingRecord.password !== passInput) {
-        setError("SECURITY ALERT: Invalid password. Access denied.");
+        setError("SECURITY ALERT: Credentials do not match cloud registry.");
         setIsLoading(false);
         return;
       }
 
-      // Login success
+      // Valid Credentials - Authorize Session
       const user: User = {
         id: emailInput,
         name: emailInput.split('@')[0],
@@ -54,16 +55,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t })
       };
       onLogin(user);
     } else {
-      // Signup Mode (POST request)
+      // SIGNUP PROTOCOL: Email must NOT exist in the cloud
       if (existingRecord) {
-        setError("IDENTITY DETECTED: Account already exists in cloud registry.");
+        setError("REGISTRATION FAILED: This Gmail is already registered in the cloud.");
         setIsLoading(false);
         return;
       }
 
-      // Transmit to Cloud
+      // Transmit new identity to Cloud
       await onSync(emailInput, passInput, 'Pending');
       
+      // Auto-login after successful sync
       const user: User = {
         id: emailInput,
         name: emailInput.split('@')[0],
@@ -86,12 +88,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t })
              <span className="text-white font-gaming font-black text-xl">M</span>
           </div>
           <h1 className="text-2xl font-gaming font-black text-slate-900 uppercase tracking-tighter">MoonNight <span className="text-blue-600">Secure</span></h1>
-          <p className="text-slate-400 text-[9px] font-gaming uppercase tracking-[0.4em] mt-2">Central Cloud Protocol Active</p>
+          <p className="text-slate-400 text-[9px] font-gaming uppercase tracking-[0.4em] mt-2">Cloud Infrastructure Active</p>
         </div>
 
         <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-10 border border-slate-200">
           <button onClick={() => setMode('login')} className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest font-black transition-all ${mode === 'login' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Login</button>
-          <button onClick={() => setMode('signup')} className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest font-black transition-all ${mode === 'signup' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Register</button>
+          <button onClick={() => setMode('signup')} className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest font-black transition-all ${mode === 'signup' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Sign Up</button>
         </div>
 
         {error && (
@@ -107,7 +109,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t })
               required 
               type="email" 
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 outline-none focus:border-blue-700 font-bold transition-all text-sm" 
-              placeholder="PILOT@CENTRAL.NET" 
+              placeholder="PILOT@HQ.NET" 
               value={formData.email} 
               onChange={(e) => setFormData({...formData, email: e.target.value})} 
             />
@@ -128,11 +130,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t })
             disabled={isLoading}
             className="w-full bg-blue-700 text-white font-gaming py-5 rounded-2xl text-xs uppercase tracking-widest font-black shadow-xl shadow-blue-100 active:scale-95 disabled:opacity-50"
           >
-            {isLoading ? 'UPLINKING...' : (mode === 'login' ? 'ESTABLISH LINK' : 'INITIALIZE REGISTRY')}
+            {isLoading ? 'ESTABLISHING LINK...' : (mode === 'login' ? 'AUTHORIZE LOGIN' : 'CREATE CLOUD IDENTITY')}
           </button>
         </form>
 
-        <button onClick={onBack} className="w-full text-slate-400 text-[8px] font-gaming uppercase tracking-widest mt-10 hover:text-blue-700 transition-colors">← Back to HQ</button>
+        <button onClick={onBack} className="w-full text-slate-400 text-[8px] font-gaming uppercase tracking-widest mt-10 hover:text-blue-700 transition-colors">← Back to Boutique</button>
       </div>
     </div>
   );
