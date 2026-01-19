@@ -22,7 +22,8 @@ interface CheckoutProps {
   t: (key: TranslationKeys) => string;
 }
 
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbyrNB9GTXgYcMT6KA97xOmTZahp1Ou1yH5wjnXHNoG2UvvreAAWCw7sd19Ipa-HBGBT/exec";
+// UPDATED CLOUD ENDPOINT
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbyxQ5FHgXq7N3xrWnZqG-R4vbYJZwJ0rhUmXBQXl-fZT4Wx1-B8YkADqGoOFE-ox4Yw7A/exec";
 
 const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }> = ({ 
   cart, 
@@ -99,7 +100,6 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
     if (isExternalPayment && !isExternalSuccess) return;
     
     setIsSubmitting(true);
-    // Even if isInstant is true for the UI flow, App.tsx now overrides initial status to 'Payment Verifying'
     const isInstant = paymentMethod === 'solde' || isExternalPayment;
     
     onComplete({ 
@@ -235,7 +235,7 @@ const Checkout: React.FC<CheckoutProps & { setActivePage: (p: string) => void }>
 
   if (!currentUser) {
     return (
-      <div className="pt-40 pb-24 max-w-lg mx-auto px-6 text-center">
+      <div className="pt-40 pb-24 max-lg mx-auto px-6 text-center">
         <div className="bg-slate-900 border border-slate-800 p-12 rounded-[2rem] shadow-2xl">
           <i className="fas fa-lock text-4xl text-cyan-400 mb-6 block"></i>
           <h3 className="text-white font-gaming uppercase mb-8">Authentication Required</h3>

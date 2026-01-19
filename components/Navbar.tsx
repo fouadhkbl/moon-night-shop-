@@ -21,117 +21,48 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, activePage, setA
     { id: 'contact', label: 'support', icon: 'fa-headset' },
   ];
 
-  const handlePageChange = (pageId: string) => {
-    setActivePage(pageId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
-    <>
-      {/* TOP NAVIGATION BAR */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] glass border-b border-blue-100 h-16 sm:h-24 transition-all duration-300 shadow-sm">
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-8 h-full">
-          <div className="flex items-center justify-between h-full">
-            
-            {/* Logo Area */}
-            <div 
-              className="flex items-center space-x-2 sm:space-x-4 cursor-pointer group flex-shrink-0"
-              onClick={() => handlePageChange('home')}
-            >
-              <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0 bg-blue-700 rounded-lg shadow-md flex items-center justify-center transform group-hover:scale-105 transition-all">
-                <span className="text-white font-gaming font-black text-sm sm:text-2xl">M</span>
-              </div>
-              <span className="text-slate-900 font-gaming text-sm sm:text-2xl lg:text-3xl font-black tracking-tight whitespace-nowrap uppercase">
-                MoonNight <span className="text-blue-600">Shop</span>
-              </span>
-            </div>
-
-            {/* Desktop Only Center Nav */}
-            <div className="hidden lg:flex items-center justify-center space-x-12 flex-1">
-              {navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => handlePageChange(link.id)}
-                  className={`text-[11px] xl:text-[13px] font-gaming uppercase tracking-[0.2em] font-bold transition-all hover:text-blue-600 ${
-                    activePage === link.id ? 'text-blue-700' : 'text-slate-500'
-                  }`}
-                >
-                  {t(link.label)}
-                </button>
-              ))}
-            </div>
-
-            {/* Right Icons Area */}
-            <div className="flex items-center justify-end space-x-2 sm:space-x-4">
-              <div className="hidden md:flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
-                <button onClick={() => setLanguage('EN')} className={`px-2.5 py-1 rounded text-[8px] font-gaming font-black transition-all ${language === 'EN' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500'}`}>EN</button>
-                <button onClick={() => setLanguage('FR')} className={`px-2.5 py-1 rounded text-[8px] font-gaming font-black transition-all ${language === 'FR' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500'}`}>FR</button>
-              </div>
-
-              <button 
-                onClick={() => handlePageChange(user ? 'account' : 'auth')}
-                className={`p-2 sm:p-2.5 rounded-lg border transition-all ${
-                  user ? 'text-blue-600 border-blue-200 bg-blue-50' : 'text-slate-500 border-transparent hover:text-blue-600'
-                }`}
-              >
-                <i className="fas fa-user-circle text-lg sm:text-2xl"></i>
-              </button>
-
-              <button 
-                onClick={onOpenCart}
-                className="relative p-2 sm:p-2.5 text-slate-500 hover:text-blue-600 transition-all transform active:scale-90"
-              >
-                <i className="fas fa-shopping-bag text-lg sm:text-2xl"></i>
-                {cartCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-blue-700 text-white text-[8px] sm:text-[10px] font-black w-4 h-4 sm:w-6 sm:h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-            </div>
+    <nav className="fixed top-0 left-0 right-0 z-[100] glass border-b border-slate-800 h-20">
+      <div className="max-w-7xl mx-auto px-6 sm:px-12 h-full flex items-center justify-between">
+        <div className="flex items-center space-x-4 cursor-pointer group" onClick={() => setActivePage('home')}>
+          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center transform group-hover:rotate-6 transition-all shadow-lg shadow-blue-900/20">
+            <span className="text-white font-gaming font-black text-xl">M</span>
           </div>
+          <span className="text-white font-gaming text-xl font-black uppercase tracking-tight">
+            MoonNight <span className="text-blue-500">Shoop</span>
+          </span>
         </div>
-      </nav>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR: MODERN CLEAN HUD */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-2xl border-t border-blue-100 h-16 flex justify-around items-center px-4 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
-        <div className="hud-scanline opacity-10" />
-
-        {navLinks.map((link) => {
-          const isActive = activePage === link.id;
-          return (
+        <div className="hidden lg:flex items-center space-x-10">
+          {navLinks.map((link) => (
             <button
               key={link.id}
-              onClick={() => handlePageChange(link.id)}
-              className="relative flex flex-col items-center justify-center w-full h-full transition-all group overflow-hidden"
+              onClick={() => setActivePage(link.id)}
+              className={`text-[10px] font-gaming uppercase tracking-widest font-black transition-all hover:text-blue-500 ${activePage === link.id ? 'text-blue-500' : 'text-slate-400'}`}
             >
-              {isActive && (
-                <div className="absolute inset-0 nav-button-glow" />
-              )}
-              
-              <div className={`flex flex-col items-center justify-center space-y-1 transition-all duration-300 ${
-                isActive ? 'translate-y-0' : 'translate-y-0.5'
-              }`}>
-                <div className="relative">
-                  <i className={`fas ${link.icon} ${isActive ? 'text-xl text-blue-700' : 'text-lg text-slate-400'} transition-all`}></i>
-                </div>
-                <span className={`text-[8px] font-gaming font-black uppercase tracking-[0.25em] transition-all ${
-                  isActive ? 'text-blue-700' : 'text-slate-400'
-                }`}>
-                  {t(link.label)}
-                </span>
-              </div>
-              
-              {isActive && (
-                <>
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] bg-blue-600 rounded-b-full shadow-sm" />
-                </>
-              )}
+              {t(link.label)}
             </button>
-          );
-        })}
+          ))}
+        </div>
+
+        <div className="flex items-center space-x-6">
+          <button 
+            onClick={() => setActivePage(user ? 'account' : 'auth')}
+            className={`text-slate-400 hover:text-blue-500 transition-all ${user ? 'text-blue-500 font-bold' : ''}`}
+          >
+            <i className="fas fa-user-circle text-2xl"></i>
+          </button>
+          <button onClick={onOpenCart} className="relative text-slate-400 hover:text-blue-500 transition-all">
+            <i className="fas fa-shopping-bag text-2xl"></i>
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-slate-900">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
-    </>
+    </nav>
   );
 };
 

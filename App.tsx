@@ -10,69 +10,69 @@ import Admin from './pages/Admin';
 import Checkout from './pages/Checkout';
 import Auth from './pages/Auth';
 import Account from './pages/Account';
-import { Product, CartItem, Order, User, ChatMessage, Language } from './types';
+import { Product, CartItem, User, Language } from './types';
 import { PRODUCTS } from './constants';
 import { translations, TranslationKeys } from './translations';
 
-// FINAL CLOUD BACKEND URL - NO LOCALSTORAGE ALLOWED
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbx-dMW3yr5QO3iuwfFr18h2DDdVehtM4dpyLbxolTu6gaZSVFq-KN037rFFZBT77phpPw/exec";
+// YOUR NEW DEPLOYED CLOUD URL
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbx0xzib7CLVxGIpCOlmJLKb_ZkaCgPBydYrytRCKvmps3VujbTqB-Xj1D0mUB0G6NlXbg/exec";
 
 const App: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState('home');
   const [language, setLanguage] = useState<Language>('EN');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [wishlist, setWishlist] = useState<string[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [detailQuantity, setDetailQuantity] = useState(1);
-
-  // Cloud Database States
-  const [cloudRecords, setCloudRecords] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  // Cloud Database State
+  const [cloudRecords, setCloudRecords] = useState<any[]>([]);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   const t = (key: TranslationKeys) => translations[language][key] || key;
 
-  // Real-time Cloud Fetch (GET) - Synchronizes data across all IPs
-  const fetchGlobalData = async () => {
+  // EXPORT PROTOCOL: Fetches all users for verification
+  const fetchCloudUsers = async () => {
+    setIsCloudSyncing(true);
     try {
       const response = await fetch(SHEET_URL);
       const data = await response.json();
       if (Array.isArray(data)) {
         setCloudRecords(data);
+        return data;
       }
+      return [];
     } catch (e) {
-      console.error("Critical: Cloud Retrieval Failure", e);
+      console.error("Cloud Fetch Error:", e);
+      return [];
     } finally {
-      setLoading(false);
+      setIsCloudSyncing(false);
     }
   };
 
-  // Real-time Cloud Upload (POST) - Register new identities
-  const syncToCloud = async (gmail: string, password: string, statut: string = 'Pending') => {
+  // UPLOAD PROTOCOL: Saves a new user to the cloud
+  const registerCloudUser = async (email: string, pass: string) => {
     const payload = {
-      "gmail": gmail.toLowerCase().trim(),
-      "password": password,
-      "statut": statut
+      gmail: email.toLowerCase().trim(),
+      password: pass,
+      statut: "active"
     };
     try {
-      // mode: 'no-cors' is used to handle Google Apps Script redirects silently
       await fetch(SHEET_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      // Immediately refresh the global records so the new user exists for the login flow
-      await fetchGlobalData();
-    } catch (e) { 
-      console.error("Critical: Cloud Upload Failure", e); 
+      // Refresh local cache
+      await fetchCloudUsers();
+    } catch (e) {
+      console.error("Cloud Register Error:", e);
     }
   };
 
   useEffect(() => {
-    fetchGlobalData();
-    // Strict compliance: No localStorage or cookie initialization here.
+    fetchCloudUsers();
   }, []);
 
   const handleAddToCart = (product: Product, qty: number = 1) => {
@@ -84,29 +84,8 @@ const App: React.FC = () => {
     setIsCartOpen(true);
   };
 
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    setActivePage('home');
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setActivePage('home');
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-6">
-           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-           <p className="font-gaming text-blue-700 text-[10px] animate-pulse tracking-[0.4em] uppercase font-black">Syncing Cloud Database...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-transparent text-slate-900 selection:bg-blue-200">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Navbar 
         cartCount={cart.reduce((sum, i) => sum + i.quantity, 0)} 
         onOpenCart={() => setIsCartOpen(true)} 
@@ -128,41 +107,47 @@ const App: React.FC = () => {
         t={t}
       />
 
-      <main className="pb-20 lg:pb-0 min-h-screen">
-        {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={setSelectedProduct} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
-        {activePage === 'shop' && <Shop products={PRODUCTS} onAddToCart={handleAddToCart} onViewDetails={setSelectedProduct} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} t={t} />}
-        {activePage === 'contact' && <Contact onSendTicket={(tk) => {}} t={t} />}
+      <main className="flex-grow pt-20">
+        {activePage === 'home' && <Home onAddToCart={handleAddToCart} onViewDetails={()=>{}} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} setActivePage={setActivePage} t={t} />}
+        {activePage === 'shop' && <Shop products={PRODUCTS} onAddToCart={handleAddToCart} onViewDetails={()=>{}} onToggleWishlist={(id) => setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])} wishlist={wishlist} t={t} />}
+        {activePage === 'contact' && <Contact onSendTicket={()=>{}} t={t} />}
+        
         {activePage === 'auth' && (
           <Auth 
-            onLogin={handleLogin} 
+            onLogin={(user) => { setCurrentUser(user); setActivePage('home'); }} 
             onBack={() => setActivePage('home')} 
-            cloudRecords={cloudRecords} 
-            onSync={syncToCloud} 
+            onFetchLatest={fetchCloudUsers}
+            onRegisterCloud={registerCloudUser}
             t={t} 
           />
         )}
-        {activePage === 'account' && (
-          currentUser ? 
-          <Account user={currentUser} orders={[]} messages={[]} onSendMessage={()=>{}} onLogout={handleLogout} onRefresh={fetchGlobalData} isRefreshing={loading} t={t} /> 
-          : <Auth onLogin={handleLogin} onBack={() => setActivePage('home')} cloudRecords={cloudRecords} onSync={syncToCloud} t={t} />
-        )}
-        {activePage === 'admin' && (
-          <Admin 
-            cloudRecords={cloudRecords} 
-            onRefresh={fetchGlobalData}
-            cloudUrl={SHEET_URL}
-            t={t}
+
+        {activePage === 'account' && currentUser && (
+          <Account 
+            user={currentUser} 
+            orders={[]} 
+            messages={[]} 
+            onSendMessage={()=>{}} 
+            onLogout={() => { setCurrentUser(null); setActivePage('home'); }} 
+            onRefresh={fetchCloudUsers} 
+            isRefreshing={isCloudSyncing} 
+            t={t} 
           />
         )}
+
+        {activePage === 'admin' && (
+          <Admin cloudRecords={cloudRecords} onRefresh={fetchCloudUsers} cloudUrl={SHEET_URL} t={t} />
+        )}
+
         {activePage === 'checkout' && (
           <Checkout 
             cart={cart} 
             promoCodes={[]} 
             currentUser={currentUser} 
-            onComplete={() => {setActivePage('account'); setCart([]);}} 
-            onCancel={() => setActivePage('home')}
-            setActivePage={setActivePage}
-            t={t}
+            onComplete={() => { setActivePage('account'); setCart([]); }} 
+            onCancel={() => setActivePage('home')} 
+            setActivePage={setActivePage} 
+            t={t} 
           />
         )}
       </main>
