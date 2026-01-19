@@ -6,19 +6,16 @@ import { TranslationKeys } from '../translations';
 interface AuthProps {
   onLogin: (user: User) => void;
   onBack: () => void;
-  allUsers: User[];
+  cloudRecords: any[];
+  onSync: (gmail: string, pass: string, status?: string) => Promise<void>;
   t: (key: TranslationKeys) => string;
 }
 
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbyrNB9GTXgYcMT6KA97xOmTZahp1Ou1yH5wjnXHNoG2UvvreAAWCw7sd19Ipa-HBGBT/exec";
-
-const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('signup');
+const Auth: React.FC<AuthProps> = ({ onLogin, onBack, cloudRecords, onSync, t }) => {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: ''
   });
@@ -28,180 +25,114 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onBack, allUsers, t }) => {
     setIsLoading(true);
     setError(null);
 
-    const emailLower = formData.email.toLowerCase().trim();
-    const existingUser = allUsers.find(u => u.email.toLowerCase() === emailLower);
+    const emailInput = formData.email.toLowerCase().trim();
+    const passInput = formData.password;
 
-    // Task 1: Login Verification Logic
+    // Validate against Cloud Records (GET results)
+    const existingRecord = cloudRecords.find(r => (r.gmail || "").toLowerCase() === emailInput);
+
     if (mode === 'login') {
-      if (!existingUser) {
-        setError("NO ACCOUNT FOUND. PLEASE SIGN UP.");
+      if (!existingRecord) {
+        setError("UPLINK FAILED: Gmail not found in cloud database.");
         setIsLoading(false);
-        setMode('signup');
         return;
       }
-      
-      const userWithPass = existingUser as any;
-      if (userWithPass.password && userWithPass.password !== formData.password) {
-        setError("INVALID CREDENTIALS. ACCESS DENIED.");
+      if (existingRecord.password !== passInput) {
+        setError("SECURITY ALERT: Invalid password. Access denied.");
         setIsLoading(false);
         return;
       }
 
-      // Log Login Event with exact requested columns for User Sheet
-      try {
-        await fetch(SHEET_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            "first name": existingUser.name,
-            "password": formData.password,
-            "email": emailLower,
-            "date and time": new Date().toLocaleString(),
-            type: 'LOGIN_ACTION'
-          })
-        });
-      } catch (err) {
-        console.debug("Login sync attempted");
-      }
-
-      localStorage.setItem('mn_user', JSON.stringify(existingUser));
-      setTimeout(() => {
-        onLogin(existingUser);
-        setIsLoading(false);
-      }, 800);
-      return;
-    }
-
-    // Task 1: Sign Up Logic
-    if (mode === 'signup' && existingUser) {
-      setError("ACCOUNT ALREADY EXISTS. PLEASE LOGIN.");
-      setIsLoading(false);
-      setMode('login'); 
-      return;
-    }
-
-    const now = new Date();
-    
-    // Task 1 Mapping (Users Sheet):
-    // Column A: first name | Column B: password | Column C: email | Column G: date and time
-    const payload = {
-      "first name": formData.name || emailLower.split('@')[0],
-      "password": formData.password,
-      "email": emailLower,
-      "date and time": now.toLocaleString(),
-      type: 'USER_REGISTRY'
-    };
-
-    try {
-      await fetch(SHEET_URL, {
-        method: 'POST',
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (mode === 'forgot') {
-        setResetSent(true);
-        setIsLoading(false);
-        return;
-      }
-
-      const finalUser: User = {
-        id: emailLower,
-        name: formData.name || emailLower.split('@')[0],
-        email: emailLower,
-        state: 'ACTIVE',
-        joinedAt: now.toLocaleString(),
-        balance: 0 
+      // Login success
+      const user: User = {
+        id: emailInput,
+        name: emailInput.split('@')[0],
+        email: emailInput,
+        state: existingRecord.statut || 'ACTIVE',
+        joinedAt: existingRecord["date and time"] || new Date().toLocaleString(),
+        balance: 0
       };
-
-      localStorage.setItem('mn_user', JSON.stringify(finalUser));
-      
-      setTimeout(() => {
-        onLogin(finalUser);
+      onLogin(user);
+    } else {
+      // Signup Mode (POST request)
+      if (existingRecord) {
+        setError("IDENTITY DETECTED: Account already exists in cloud registry.");
         setIsLoading(false);
-      }, 1000);
+        return;
+      }
+
+      // Transmit to Cloud
+      await onSync(emailInput, passInput, 'Pending');
       
-    } catch (err) {
-      setError('CONNECTION ERROR. PLEASE TRY AGAIN.');
-      setIsLoading(false);
+      const user: User = {
+        id: emailInput,
+        name: emailInput.split('@')[0],
+        email: emailInput,
+        state: 'Pending',
+        joinedAt: new Date().toLocaleString(),
+        balance: 0
+      };
+      
+      onLogin(user);
     }
+    setIsLoading(false);
   };
 
-  if (resetSent) {
-    return (
-      <div className="pt-32 pb-24 max-w-[400px] mx-auto px-4 animate-fade-in text-center">
-        <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl shadow-2xl">
-          <div className="w-16 h-16 bg-sky-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-sky-500/20">
-            <i className="fas fa-envelope text-sky-400 text-2xl"></i>
-          </div>
-          <h2 className="text-lg font-gaming font-black text-white uppercase mb-3">EMAIL SENT</h2>
-          <p className="text-slate-500 text-[10px] uppercase mb-8 tracking-widest">CHECK YOUR INBOX FOR INSTRUCTIONS</p>
-          <button onClick={() => { setResetSent(false); setMode('login'); }} className="w-full bg-sky-500 text-white font-gaming py-4 rounded-xl text-xs uppercase tracking-widest font-black shadow-lg">BACK TO LOGIN</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-[90vh] flex items-center justify-center p-6 animate-fade-in">
-      <div className="w-full max-w-[420px] sm:max-w-[500px] bg-slate-900/60 backdrop-blur-2xl border border-slate-800 p-10 sm:p-14 rounded-[3rem] shadow-[0_0_120px_rgba(0,0,0,0.6)] relative">
+    <div className="min-h-[80vh] flex items-center justify-center p-6 animate-fade-in">
+      <div className="w-full max-w-[450px] bg-white border border-slate-200 p-10 sm:p-14 rounded-[3rem] shadow-2xl relative overflow-hidden">
         <div className="text-center mb-10">
-          <div className="inline-block p-2 bg-slate-950 rounded-xl mb-4 border border-slate-800/50 shadow-inner">
-             <div className="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-gaming font-black text-xl">M</span>
-             </div>
+          <div className="w-12 h-12 bg-blue-700 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+             <span className="text-white font-gaming font-black text-xl">M</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-gaming font-black text-white uppercase tracking-tighter mb-1">
-            MOONNIGHT <span className="text-sky-400">SHOP</span>
-          </h1>
-          <p className="text-slate-600 text-[9px] font-gaming uppercase tracking-[0.5em] font-black">SECURE UPLINK PORTAL</p>
+          <h1 className="text-2xl font-gaming font-black text-slate-900 uppercase tracking-tighter">MoonNight <span className="text-blue-600">Secure</span></h1>
+          <p className="text-slate-400 text-[9px] font-gaming uppercase tracking-[0.4em] mt-2">Central Cloud Protocol Active</p>
         </div>
 
-        <div className="flex bg-slate-950/80 p-1.5 rounded-xl mb-10 border border-slate-800/50">
-          <button onClick={() => {setMode('login'); setError(null);}} className={`flex-1 py-3 rounded-lg text-[10px] sm:text-[11px] font-gaming uppercase tracking-[0.15em] font-black transition-all ${mode === 'login' ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-slate-400'}`}>{t('login')}</button>
-          <button onClick={() => {setMode('signup'); setError(null);}} className={`flex-1 py-3 rounded-lg text-[10px] sm:text-[11px] font-gaming uppercase tracking-[0.15em] font-black transition-all ${mode === 'signup' ? 'bg-sky-500 text-white shadow-[0_0_20px_rgba(14,165,233,0.3)]' : 'text-slate-500 hover:text-slate-400'}`}>{t('signup')}</button>
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-10 border border-slate-200">
+          <button onClick={() => setMode('login')} className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest font-black transition-all ${mode === 'login' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Login</button>
+          <button onClick={() => setMode('signup')} className={`flex-1 py-3 rounded-xl text-[10px] font-gaming uppercase tracking-widest font-black transition-all ${mode === 'signup' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500'}`}>Register</button>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-center animate-shake">
-            <p className="text-red-500 text-[10px] font-gaming uppercase font-black">{error}</p>
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl text-center">
+            <p className="text-red-600 text-[10px] font-gaming uppercase font-black">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
-          {mode === 'signup' && (
-            <div className="animate-slide-up">
-              <input required type="text" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-white focus:border-sky-500 outline-none text-xs sm:text-sm font-bold transition-all placeholder:text-slate-700 shadow-inner" placeholder="PILOT NAME" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            </div>
-          )}
-          
-          <div className="animate-slide-up">
-            <input required type="email" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-white focus:border-sky-500 outline-none text-xs sm:text-sm font-bold transition-all placeholder:text-slate-700 shadow-inner" placeholder="EMAIL ADDRESS" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[9px] font-gaming text-slate-400 uppercase tracking-widest ml-4">Cloud GMAIL</label>
+            <input 
+              required 
+              type="email" 
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 outline-none focus:border-blue-700 font-bold transition-all text-sm" 
+              placeholder="PILOT@CENTRAL.NET" 
+              value={formData.email} 
+              onChange={(e) => setFormData({...formData, email: e.target.value})} 
+            />
           </div>
-
-          <div className="animate-slide-up">
-            <input required type="password" minLength={6} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-6 py-4 text-white focus:border-sky-500 outline-none text-xs sm:text-sm font-bold transition-all placeholder:text-slate-700 shadow-inner" placeholder="SECURE PASSWORD" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+          <div className="space-y-2">
+            <label className="text-[9px] font-gaming text-slate-400 uppercase tracking-widest ml-4">Cloud Password</label>
+            <input 
+              required 
+              type="password" 
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-slate-900 outline-none focus:border-blue-700 font-bold transition-all text-sm" 
+              placeholder="••••••••" 
+              value={formData.password} 
+              onChange={(e) => setFormData({...formData, password: e.target.value})} 
+            />
           </div>
-
-          {mode === 'login' && (
-            <div className="text-right px-2">
-              <button type="button" onClick={() => setMode('forgot')} className="text-[8px] font-gaming uppercase tracking-widest text-slate-600 hover:text-sky-400 font-black transition-colors">FORGOT CREDENTIALS?</button>
-            </div>
-          )}
-
-          <button type="submit" disabled={isLoading} className="w-full bg-sky-500 text-white font-gaming font-black py-5 rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.3)] hover:bg-sky-400 transition-all uppercase tracking-[0.3em] mt-4 text-xs sm:text-sm disabled:opacity-50 active:scale-95">
-            {isLoading ? 'UPLINKING...' : (mode === 'login' ? 'ESTABLISH LINK' : 'INITIATE REGISTRY')}
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-blue-700 text-white font-gaming py-5 rounded-2xl text-xs uppercase tracking-widest font-black shadow-xl shadow-blue-100 active:scale-95 disabled:opacity-50"
+          >
+            {isLoading ? 'UPLINKING...' : (mode === 'login' ? 'ESTABLISH LINK' : 'INITIALIZE REGISTRY')}
           </button>
         </form>
 
-        <div className="mt-12 text-center">
-          <button onClick={onBack} className="text-slate-700 hover:text-sky-400 text-[8px] sm:text-[9px] font-gaming uppercase tracking-[0.3em] transition-colors font-black flex items-center justify-center mx-auto space-x-2 group">
-            <span className="group-hover:-translate-x-1 transition-transform">←</span>
-            <span>RETURN TO MARKETPLACE</span>
-          </button>
-        </div>
+        <button onClick={onBack} className="w-full text-slate-400 text-[8px] font-gaming uppercase tracking-widest mt-10 hover:text-blue-700 transition-colors">← Back to HQ</button>
       </div>
     </div>
   );
